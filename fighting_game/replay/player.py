@@ -15,6 +15,7 @@ class ReplayPlayer:
         self.current_frame_index = 0
         self.is_playing = False
         self.playback_speed = 1.0
+        self.max_healths = {}
         
         # Pygame setup for rendering
         pygame.init()
@@ -51,8 +52,13 @@ class ReplayPlayer:
             self.frames = [GameFrame.from_dict(frame_data) 
                           for frame_data in replay_data['frames']]
             
-            print(f"Loaded replay with {len(self.frames)} frames")
+            self.max_healths = {
+                'player1': self.frames[0].players['player1']['health'],
+                'player2': self.frames[0].players['player2']['health']
+            }
             
+            print(f"Loaded replay with {len(self.frames)} frames")
+
         except Exception as e:
             print(f"Error loading replay: {e}")
             self.frames = []
@@ -86,14 +92,14 @@ class ReplayPlayer:
         if player_data['is_jumping']:
             pygame.draw.circle(self.screen, (255, 255, 255), (x, y - 70), 3)
     
-    def draw_health_bar(self, health: float, x: int, y: int, width: int = 200):
+    def draw_health_bar(self, health: float, max_health: float, x: int, y: int, width: int = 200):
         """Draw a health bar"""
         # Background
         bg_rect = pygame.Rect(x, y, width, 20)
         pygame.draw.rect(self.screen, self.colors['health_bg'], bg_rect)
         
         # Foreground (actual health)
-        health_width = int((health / 100.0) * width)
+        health_width = int((health / max_health) * width)
         if health_width > 0:
             health_rect = pygame.Rect(x, y, health_width, 20)
             pygame.draw.rect(self.screen, self.colors['health_fg'], health_rect)
@@ -102,7 +108,7 @@ class ReplayPlayer:
         pygame.draw.rect(self.screen, (255, 255, 255), bg_rect, 2)
         
         # Health text
-        health_text = self.small_font.render(f"{int(health)}/100", True, self.colors['ui_text'])
+        health_text = self.small_font.render(f"{int(health)}/{max_health}", True, self.colors['ui_text'])
         self.screen.blit(health_text, (x + width + 10, y))
     
     def draw_ui(self, frame: GameFrame):
@@ -121,9 +127,10 @@ class ReplayPlayer:
         
         self.screen.blit(p1_text, (50, 550))
         self.screen.blit(p2_text, (550, 550))
+
         
-        self.draw_health_bar(frame.players['player1']['health'], 50, 570)
-        self.draw_health_bar(frame.players['player2']['health'], 550, 570)
+        self.draw_health_bar(frame.players['player1']['health'], self.max_healths['player1'], 50, 570)
+        self.draw_health_bar(frame.players['player2']['health'], self.max_healths['player2'], 550, 570)
         
         # Actions
         action1_text = self.small_font.render(f"Action: {frame.actions['player1']}", 

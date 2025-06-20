@@ -1,32 +1,42 @@
 import numpy as np
 from typing import Dict, Optional
+from ..config.fighter_config import Fighter
 
 class GameState:
     """Represents the current state of the fighting game"""
     
-    def __init__(self, arena_width: int = 400, arena_height: int = 600):
+    def __init__(self, arena_width: int = 800, arena_height: int = 300, 
+                 player1_stats: Optional[Fighter] = None, 
+                 player2_stats: Optional[Fighter] = None):
         self.arena_width = arena_width
         self.arena_height = arena_height
         self.ground_level = arena_height - 100
         
+        # Store player stats for reference
+        self.player1_stats = player1_stats
+        self.player2_stats = player2_stats
+        
         # Player states
         self.players = {
-            'player1': self._create_player_state(200),
-            'player2': self._create_player_state(300)
+            'player1': self._create_player_state(200, player1_stats),
+            'player2': self._create_player_state(300, player2_stats)
         }
         
         self.game_over = False
         self.winner: Optional[str] = None
         self.frame_count = 0
         
-    def _create_player_state(self, x_pos: int) -> Dict:
+    def _create_player_state(self, x_pos: int, player_stats: Optional[Fighter] = None) -> Dict:
         """Create initial player state"""
+        # Use fighter's health if provided, otherwise default to 100
+        health = player_stats.health if player_stats else 100
+        
         return {
             'x': x_pos,
             'y': self.ground_level,
             'velocity_x': 0,
             'velocity_y': 0,
-            'health': 100,
+            'health': health,
             'is_jumping': False,
             'is_blocking': False,
             'is_attacking': False,
@@ -39,27 +49,39 @@ class GameState:
         p1 = self.players['player1']
         p2 = self.players['player2']
         
+        # Get max health for normalization (use actual fighter health, or default to 100)
+        p1_max_health = self.player1_stats.health if self.player1_stats else 100
+        p2_max_health = self.player2_stats.health if self.player2_stats else 100
+        
+        # Get max speeds for normalization
+        p1_max_speed = self.player1_stats.move_speed if self.player1_stats else 10
+        p2_max_speed = self.player2_stats.move_speed if self.player2_stats else 10
+        p1_max_jump = abs(self.player1_stats.jump_force) if self.player1_stats else 15
+        p2_max_jump = abs(self.player2_stats.jump_force) if self.player2_stats else 15
+        p1_max_cooldown = self.player1_stats.attack_cooldown if self.player1_stats else 30
+        p2_max_cooldown = self.player2_stats.attack_cooldown if self.player2_stats else 30
+        
         # Normalize positions and create relative features
         features = [
             p1['x'] / self.arena_width,
             p1['y'] / self.arena_height,
-            p1['health'] / 100,
-            p1['velocity_x'] / 10,  # Assuming max velocity ~10
-            p1['velocity_y'] / 15,  # Assuming max jump velocity ~15
+            p1['health'] / p1_max_health,
+            p1['velocity_x'] / p1_max_speed,
+            p1['velocity_y'] / p1_max_jump,
             int(p1['is_jumping']),
             int(p1['is_blocking']),
             int(p1['is_attacking']),
-            p1['attack_cooldown'] / 30,  # Assuming max cooldown ~30 frames
+            p1['attack_cooldown'] / p1_max_cooldown,
             
             p2['x'] / self.arena_width,
             p2['y'] / self.arena_height,
-            p2['health'] / 100,
-            p2['velocity_x'] / 10,
-            p2['velocity_y'] / 15,
+            p2['health'] / p2_max_health,
+            p2['velocity_x'] / p2_max_speed,
+            p2['velocity_y'] / p2_max_jump,
             int(p2['is_jumping']),
             int(p2['is_blocking']),
             int(p2['is_attacking']),
-            p2['attack_cooldown'] / 30,
+            p2['attack_cooldown'] / p2_max_cooldown,
             
             # Distance between players
             abs(p1['x'] - p2['x']) / self.arena_width,

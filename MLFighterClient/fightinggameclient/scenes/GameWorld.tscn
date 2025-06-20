@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://sa2p8h1xwn06"]
+
+[ext_resource type="PackedScene" uid="uid://dxc8sjiye2j58" path="res://scenes/Player.tscn" id="1_hpeaq"]
+[ext_resource type="Script" uid="uid://txvmqxt1id5y" path="res://scripts/ReplayManager.gd" id="2_eb18a"]
+
+[node name="GameWorld" type="Node2D"]
+
+[node name="Player1" parent="." instance=ExtResource("1_hpeaq")]
+
+[node name="Player2" parent="." instance=ExtResource("1_hpeaq")]
+
+[node name="ReplayManager" type="Node" parent="."]
+script = ExtResource("2_eb18a")
+
+[node name="UI" type="CanvasLayer" parent="."]

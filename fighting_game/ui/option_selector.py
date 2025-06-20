@@ -19,6 +19,7 @@ class AgentOption:
     
     def to_dict(self) -> Dict:
         return {
+            'fighter': self.fighter,
             'features': list(self.features),
             'epsilon': self.epsilon,
             'decay': self.decay,
@@ -194,13 +195,11 @@ class OptionSelectorUI:
         
         for i, option in enumerate(self.options):
             # Fighter
-            fighter_name = "Fighter: " + option.fighter
-
-            rb = ttk.Radiobutton(frame, text=f"Fighter {fighter_name}", 
+            rb = ttk.Radiobutton(frame, text=f"Fighter: {option.fighter}", 
                                variable=self.option_var, value=i)
             rb.grid(row=i*5, column=0, sticky=tk.W, pady=5)
 
-            fighter_stats = fighter_manager.retrieve_fighter_stats(option.fighter)
+            fighter_stats = fighter_manager.current_stats(option.fighter)
             fighter_information = "Fighter stats: " + ", ".join(f"{key}: {value}" for key, value in fighter_stats.to_dict().items())
             ttk.Label(frame, text=fighter_information).grid(
                 row=i*5+1, column=0, columnspan=2, sticky=tk.W, padx=20)
@@ -229,6 +228,7 @@ class OptionSelectorUI:
             self.selected_index = self.option_var.get()
             self.selected_option = self.options[self.selected_index]
             self.current_config = AgentOption(
+                fighter=self.selected_option.fighter,
                 features=set(self.selected_option.features),
                 epsilon=self.selected_option.epsilon,
                 decay=self.selected_option.decay,
@@ -260,10 +260,15 @@ class OptionSelectorUI:
         
         self.config_labels = {}
         
+        # Fighter
+        fighter_text = f"Fighter: {self.current_config.fighter}"
+        self.config_labels['fighter'] = ttk.Label(config_frame, text=fighter_text)
+        self.config_labels['fighter'].grid(row=0, column=0, columnspan=3, sticky=tk.W)
+        
         # Features
         features_text = "Features: " + ", ".join(sorted(self.current_config.features))
         self.config_labels['features'] = ttk.Label(config_frame, text=features_text, wraplength=700)
-        self.config_labels['features'].grid(row=0, column=0, columnspan=3, sticky=tk.W)
+        self.config_labels['features'].grid(row=1, column=0, columnspan=3, sticky=tk.W)
         
         # Parameters
         self.update_parameter_display(config_frame)
@@ -289,11 +294,23 @@ class OptionSelectorUI:
             self.config_labels['params'].config(text=param_text)
         else:
             self.config_labels['params'] = ttk.Label(parent, text=param_text)
-            self.config_labels['params'].grid(row=1, column=0, columnspan=3, sticky=tk.W)
+            self.config_labels['params'].grid(row=2, column=0, columnspan=3, sticky=tk.W)
     
     def create_modification_buttons(self, parent):
         """Create modification buttons"""
         row = 0
+        
+        # Change fighter button (costs 2 tokens)
+        fighter_cost = 2
+        ttk.Label(parent, text=f"Change Fighter ({fighter_cost} tokens):").grid(
+            row=row, column=0, sticky=tk.W)
+        
+        fighter_btn = ttk.Button(parent, text="Select Fighter", 
+                               command=self.change_fighter)
+        fighter_btn.grid(row=row, column=1, padx=5)
+        if self.remaining_tokens < fighter_cost:
+            fighter_btn.config(state='disabled')
+        row += 1
         
         # Unlock feature button
         unlock_cost = self.config.get_cost("unlock_feature")
@@ -413,6 +430,62 @@ class OptionSelectorUI:
         
         ttk.Button(dialog, text="Unlock", command=add_feature).pack(pady=10)
     
+    def change_fighter(self):
+        """Show fighter change dialog"""
+        cost = 2
+        if self.remaining_tokens < cost:
+            return
+        
+        # Get available fighters
+        fighter_manager = FighterManager()
+        available_fighters = fighter_manager.fighter_list()
+        
+        # Create selection dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Select Fighter")
+        dialog.geometry("500x400")
+        
+        ttk.Label(dialog, text="Choose a fighter:", 
+                 font=('Arial', 12)).pack(pady=10)
+        
+        # Fighter listbox with stats display
+        frame = ttk.Frame(dialog)
+        frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+        
+        listbox = tk.Listbox(frame, height=8)
+        listbox.pack(side=tk.LEFT, fill=tk.Y)
+        
+        # Stats display
+        stats_text = tk.Text(frame, width=40, height=8, wrap=tk.WORD)
+        stats_text.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        
+        for fighter in available_fighters:
+            listbox.insert(tk.END, fighter)
+        
+        def on_fighter_select(event):
+            selection = listbox.curselection()
+            if selection:
+                fighter = listbox.get(selection[0])
+                stats = fighter_manager.current_stats(fighter)
+                stats_info = f"Fighter: {fighter}\n\n"
+                stats_info += "\n".join(f"{key.replace('_', ' ').title()}: {value}" 
+                                      for key, value in stats.to_dict().items())
+                stats_text.delete(1.0, tk.END)
+                stats_text.insert(1.0, stats_info)
+        
+        listbox.bind('<<ListboxSelect>>', on_fighter_select)
+        
+        def change_fighter_action():
+            selection = listbox.curselection()
+            if selection:
+                fighter = listbox.get(selection[0])
+                self.current_config.fighter = fighter
+                self.remaining_tokens -= cost
+                self.update_display()
+                dialog.destroy()
+        
+        ttk.Button(dialog, text="Select Fighter", command=change_fighter_action).pack(pady=10)
+    
     def modify_parameter(self, param: str, delta: float):
         """Modify a parameter"""
         cost = self.config.get_cost(f"modify_{param}")
@@ -439,6 +512,10 @@ class OptionSelectorUI:
         self.token_label.config(text=f"Tokens: {self.remaining_tokens}/{self.tokens}")
         
         # Update configuration display
+        if 'fighter' in self.config_labels:
+            fighter_text = f"Fighter: {self.current_config.fighter}"
+            self.config_labels['fighter'].config(text=fighter_text)
+        
         features_text = "Features: " + ", ".join(sorted(self.current_config.features))
         self.config_labels['features'].config(text=features_text)
         

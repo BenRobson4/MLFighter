@@ -30,7 +30,7 @@ class GameFrame:
 class ReplayRecorder:
     """Records game sessions for later replay"""
     
-    def __init__(self, save_directory: str = "replays"):
+    def __init__(self, save_directory: str = "fighting_game/replays"):
         self.save_directory = save_directory
         self.current_recording = []
         self.is_recording = False

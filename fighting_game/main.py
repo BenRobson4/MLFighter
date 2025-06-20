@@ -3,7 +3,7 @@ Main entry point for the Fighting Game ML Framework
 """
 
 import argparse
-from .ui.game_manager import GameManager
+from fighting_game.core.game_manager import GameManager
 
 
 def main():

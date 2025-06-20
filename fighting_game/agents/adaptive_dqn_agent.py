@@ -16,7 +16,10 @@ from ..ui.option_selector import AgentOption
 class AdaptiveConfig:
     """Configuration for adaptive agent with feature masking and reward shaping"""
     
-    def __init__(self):
+    def __init__(self, fighter: str = 'Default'):
+        # Fighter type (can be used for specific configurations)
+        self.fighter = fighter
+
         # All possible features (always same order)
         self.all_features = [
             'player_x', 'player_y', 'player_health', 'player_velocity_x', 'player_velocity_y',
@@ -167,12 +170,15 @@ class AdaptiveDQNAgent(MLAgent):
             self.config.get_feature_mask()
         ).to(self.config.device)
     
-    def update_configuration(self, features: Set[str] = None, 
+    def update_configuration(self, fighter: str = None,
+                           features: Set[str] = None, 
                            reward_weights: Dict[str, float] = None,
                            epsilon: float = None,
                            epsilon_decay: float = None,
                            learning_rate: float = None):
         """Update agent configuration during training"""
+        if fighter is not None:
+            self.config.fighter = fighter
         
         if features is not None:
             self.config.update_features(features)
@@ -364,6 +370,7 @@ class AdaptiveDQNAgent(MLAgent):
         """Get current configuration as AgentOption"""
         from ..ui.option_selector import AgentOption
         return AgentOption(
+            fighter=self.config.fighter,
             features=set(self.config.active_features),
             epsilon=self.epsilon,  # Use current epsilon, not config
             decay=self.config.epsilon_decay,

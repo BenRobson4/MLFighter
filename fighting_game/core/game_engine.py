@@ -1,19 +1,26 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 from .game_state import GameState
 from .actions import Action
+from ..config.fighter_config import Fighter
+from ..config.fighter_manager import FighterManager
 
 class GameEngine:
     """Main game engine that handles physics and game logic"""
     
-    def __init__(self):
-        self.state = GameState()
-        self.physics_config = {
-            'gravity': 0.8,
-            'jump_force': -15,
-            'move_speed': 5,
-            'attack_range': 80,
-            'attack_damage': 10,
-            'attack_cooldown': 30
+    def __init__(self, player1_fighter: str = 'Default', player2_fighter: str = 'Default'):
+        self.fighter_manager = FighterManager()
+        
+        # Get fighter stats
+        self.player1_stats = self.fighter_manager.current_stats(player1_fighter)
+        self.player2_stats = self.fighter_manager.current_stats(player2_fighter)
+        
+        # Create game state with fighter stats
+        self.state = GameState(player1_stats=self.player1_stats, player2_stats=self.player2_stats)
+        
+        # Store player physics configs for easy access
+        self.player_physics = {
+            'player1': self.player1_stats.to_dict(),
+            'player2': self.player2_stats.to_dict()
         }
     
     def step(self, player1_action: Action, player2_action: Action) -> Tuple[GameState, Dict[str, float]]:
@@ -53,35 +60,38 @@ class GameEngine:
     def _apply_action(self, player_id: str, action: Action):
         """Apply player action to game state"""
         player = self.state.players[player_id]
+        physics = self.player_physics[player_id]
         
         # Reset action states
         player['is_blocking'] = False
         player['is_attacking'] = False
         
         if action == Action.LEFT:
-            player['velocity_x'] = -self.physics_config['move_speed']
+            player['velocity_x'] = -physics['move_speed']
             player['facing_right'] = False
         elif action == Action.RIGHT:
-            player['velocity_x'] = self.physics_config['move_speed']
+            player['velocity_x'] = physics['move_speed']
             player['facing_right'] = True
         elif action == Action.JUMP and not player['is_jumping']:
-            player['velocity_y'] = self.physics_config['jump_force']
+            player['velocity_y'] = physics['jump_force']
             player['is_jumping'] = True
         elif action == Action.BLOCK:
             player['is_blocking'] = True
             player['velocity_x'] = 0
         elif action == Action.ATTACK and player['attack_cooldown'] <= 0:
             player['is_attacking'] = True
-            player['attack_cooldown'] = self.physics_config['attack_cooldown']
+            player['attack_cooldown'] = physics['attack_cooldown']
         else:  # IDLE
             player['velocity_x'] = 0
     
     def _update_physics(self):
         """Update physics for all players"""
-        for player in self.state.players.values():
+        for player_id, player in self.state.players.items():
+            physics = self.player_physics[player_id]
+            
             # Apply gravity
             if player['is_jumping']:
-                player['velocity_y'] += self.physics_config['gravity']
+                player['velocity_y'] += physics['gravity']
             
             # Update positions
             player['x'] += player['velocity_x']
@@ -99,17 +109,29 @@ class GameEngine:
     def _handle_combat(self):
         """Handle combat interactions between players"""
         p1, p2 = self.state.players['player1'], self.state.players['player2']
-        distance = abs(p1['x'] - p2['x'])
+        p1_physics, p2_physics = self.player_physics['player1'], self.player_physics['player2']
+        x_distance = p1['x'] - p2['x']
+        y_distance = abs(p1['y'] - p2['y'])
+        p2_facing_right = (p2['facing_right'] << 1) - 1  # Convert to -1 or 1  
+        p1_facing_right = -p2_facing_right
+        p1_x_displacement = x_distance * p1_facing_right
+        p2_x_displacement = x_distance * p2_facing_right
+
+        # Check if player 1 is in range to attack player 2
+        p1_in_range = p1_x_displacement <= p1_physics['x_attack_range'] and p1_x_displacement >= 0 and y_distance <= p1_physics['y_attack_range']
+
+        # Check if player 2 is in range to attack player 1
+        p2_in_range = p2_x_displacement <= p2_physics['x_attack_range'] and p2_x_displacement >= 0 and y_distance <= p2_physics['y_attack_range']
         
         # Player 1 attacking Player 2
-        if (p1['is_attacking'] and distance <= self.physics_config['attack_range'] 
+        if (p1['is_attacking'] and p1_in_range
             and not p2['is_blocking']):
-            p2['health'] -= self.physics_config['attack_damage']
+            p2['health'] -= p1_physics['attack_damage']
         
         # Player 2 attacking Player 1
-        if (p2['is_attacking'] and distance <= self.physics_config['attack_range'] 
+        if (p2['is_attacking'] and p2_in_range
             and not p1['is_blocking']):
-            p1['health'] -= self.physics_config['attack_damage']
+            p1['health'] -= p2_physics['attack_damage']
     
     def _update_cooldowns(self):
         """Update attack cooldowns"""
@@ -163,5 +185,5 @@ class GameEngine:
     
     def reset(self) -> GameState:
         """Reset the game to initial state"""
-        self.state = GameState()
+        self.state = GameState(player1_stats=self.player1_stats, player2_stats=self.player2_stats)
         return self.state

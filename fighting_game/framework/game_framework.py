@@ -7,8 +7,9 @@ from ..replay import ReplayRecorder
 class FightingGameFramework:
     """Main framework class that orchestrates the fighting game"""
     
-    def __init__(self, agent1: MLAgent, agent2: MLAgent, record_replays: bool = False):
-        self.engine = GameEngine()
+    def __init__(self, agent1: MLAgent, agent2: MLAgent, record_replays: bool = False, 
+                 player1_fighter: str = 'Default', player2_fighter: str = 'Default'):
+        self.engine = GameEngine(player1_fighter=player1_fighter, player2_fighter=player2_fighter)
         self.agents = {'player1': agent1, 'player2': agent2}
         self.game_history = []
         self.record_replays = record_replays
