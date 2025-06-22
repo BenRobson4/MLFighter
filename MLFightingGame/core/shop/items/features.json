@@ -1,0 +1,94 @@
+{
+    "distance": {
+        "distance_x": {
+            "description": "Horizontal distance between fighters",
+            "cost": 100,
+            "stock": 1,
+            "category": "distance"
+        },
+        "distance_y": {
+            "description": "Vertical distance between fighters",
+            "cost": 100,
+            "stock": 1,
+            "category": "distance"
+        },
+        "distance_total": {
+            "description": "Total euclidean distance between fighters",
+            "cost": 150,
+            "stock": 1,
+            "category": "distance"
+        }
+    },
+    "combat": {
+        "enemy_health": {
+            "description": "Current health of the enemy",
+            "cost": 200,
+            "stock": 1,
+            "category": "combat"
+        },
+        "own_health": {
+            "description": "Fighter's own health",
+            "cost": 150,
+            "stock": 1,
+            "category": "combat"
+        },
+        "is_attacking": {
+            "description": "Whether the fighter is currently attacking",
+            "cost": 250,
+            "stock": 1,
+            "category": "combat"
+        },
+        "enemy_is_attacking": {
+            "description": "Whether the enemy is currently attacking",
+            "cost": 300,
+            "stock": 1,
+            "category": "combat"
+        }
+    },
+    "movement": {
+        "player_x": {
+            "description": "Fighter's horizontal position",
+            "cost": 80,
+            "stock": 1,
+            "category": "movement"
+        },
+        "player_y": {
+            "description": "Fighter's vertical position",
+            "cost": 80,
+            "stock": 1,
+            "category": "movement"
+        },
+        "velocity_x": {
+            "description": "Fighter's horizontal velocity",
+            "cost": 120,
+            "stock": 1,
+            "category": "movement"
+        },
+        "velocity_y": {
+            "description": "Fighter's vertical velocity",
+            "cost": 120,
+            "stock": 1,
+            "category": "movement"
+        },
+        "is_jumping": {
+            "description": "Whether the fighter is in the air",
+            "cost": 100,
+            "stock": 1,
+            "category": "movement"
+        }
+    },
+    "miscellaneous": {
+        "time_remaining": {
+            "description": "Time left in the match",
+            "cost": 50,
+            "stock": 1,
+            "category": "miscellaneous"
+        },
+        "arena_width": {
+            "description": "Width of the combat arena",
+            "cost": 30,
+            "stock": 1,
+            "category": "miscellaneous"
+        }
+    }
+}
