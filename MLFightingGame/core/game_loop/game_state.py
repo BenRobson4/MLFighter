@@ -149,31 +149,6 @@ class GameState:
             'distance_y': abs(p2.y - p1.y),
         }
     
-    def register_reward_shaper(self, player_id: int, shaper):
-        """Register a reward shaper for a player"""
-        self.reward_shapers[player_id] = shaper
-    
-    def calculate_rewards(self):
-        """Calculate rewards for both players"""
-        state_dict = self.to_dict()
-        
-        for player_id, player in self.players.items():
-            if player_id in self.reward_shapers:
-                # Set current player for reward calculation context
-                state_dict['current_player'] = f'player{player_id}'
-                
-                # Calculate reward using player's shaper
-                reward_info = self.reward_shapers[player_id].calculate_reward(state_dict)
-                
-                # Add components to player's accumulated reward
-                for component, value in reward_info['components'].items():
-                    player.add_reward(value, component)
-    
-    def reset_accumulated_rewards(self):
-        """Reset accumulated rewards for both players"""
-        for player in self.players.values():
-            player.reset_accumulated_reward()
-    
     def is_game_over(self) -> bool:
         """Check if game is over"""
         # Game ends if time is up or a player has 0 health

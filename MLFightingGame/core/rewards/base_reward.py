@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 import numpy as np
+from ..game_loop.game_state import GameState
 
 
 class RewardEvent(ABC):
@@ -20,15 +21,13 @@ class RewardEvent(ABC):
             self.name = self.__class__.__name__.replace('Reward', '').lower()
     
     @abstractmethod
-    def measure(self, player_state: Dict[str, Any], opponent_state: Dict[str, Any], 
-                game_info: Dict[str, Any]) -> float:
+    def measure(self, game_state: GameState, player_id: int) -> float:
         """
         Calculate the reward value for this event
         
         Args:
-            player_state: Dictionary containing player state info
-            opponent_state: Dictionary containing opponent state info
-            game_info: Additional game information (max values, boundaries, etc.)
+            game_state: Current state of the game
+            player_id: ID of the player for whom the reward is being calculated
             
         Returns:
             Normalized reward value (typically 0-1)
