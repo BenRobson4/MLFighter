@@ -364,7 +364,7 @@ class GameEngine:
         
         self.replay_data['frames'].append(frame_data)
 
-    def _get_player_config(self, player_state: PlayerState):
+    def _get_player_config(self, player_state: PlayerState) -> dict:
         """Get static player configuration for replay metadata"""
         return {
             'fighter_type': player_state.fighter_type,
@@ -376,7 +376,7 @@ class GameEngine:
             'action_durations': player_state.action_durations
         }
 
-    def _compress_player_state(self, player_state):
+    def _compress_player_state(self, player_state: PlayerState) -> dict:
         """Compress player state to minimal data needed for replay"""
         return {
             'x': round(player_state.x, 1),
@@ -387,7 +387,7 @@ class GameEngine:
             'flags': self._pack_boolean_flags(player_state)  # Pack multiple booleans into single int
         }
 
-    def _pack_boolean_flags(self, player_state):
+    def _pack_boolean_flags(self, player_state: PlayerState) -> int:
         """Pack boolean flags into a single integer for compression"""
         flags = 0
         if player_state.is_jumping: flags |= 1
