@@ -13,6 +13,8 @@ class Weapon:
     y_attack_range_modifier: int # How many pixels the weapon hits above them
     attack_damage_modifier: int  # How much damage the weapon does on a landed hit
     attack_cooldown_modifier: int # How long the character has to wait between attacks with this weapon
+    hit_stun_frames_modifier: int = 0 # How many more/fewer frames the opponent is stunned for when hit by this weapon
+    block_stun_frames_modifier: int = 0 # How many more/fewer frames the opponent is stunned for when blocking with this weapon
     rarity: str = 'common' # The rarity of the weapon, e.g., common, rare, epic, legendary
     
     def to_dict(self) -> Dict:

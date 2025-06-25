@@ -4,32 +4,44 @@ import json
 import logging
 from pathlib import Path
 import numpy as np
+import random
 
 from ..data_classes import Fighter, Weapon, Armour, PlayerState, LearningParameters, PlayerInventory
 from .ml_agent import MLAgent
-from ..globals import Action
+from .fighter_loader import FighterLoader
+from .player_state_builder import PlayerStateBuilder
+from .player_state_machine import StateMachine
+from ..globals import Action, State
 
 logger = logging.getLogger(__name__)
 
 class Player(MLAgent):
     """Player class managing fighter stats, items, and ML agent"""
-    
     def __init__(self, 
-                 player_id: str,
-                 fighter: Fighter,
+                 player_id: int, # 1 or 2
+                 fighter_name: str = None,
                  starting_gold: int = 1000,
                  starting_level: int = 1,
                  learning_parameters: Optional[LearningParameters] = None,
                  items: Optional[PlayerInventory] = None,
                  num_actions: int = 6,
-                 num_features: int = 20):  # Based on your GameState.get_state_vector
+                 num_features: int = 20):
         
+        super().__init__(num_features=num_features, num_actions=num_actions)
+
         # Player identification
         self.player_id = player_id
         
+        # Load fighter from configuration
+        FighterLoader.set_config_path('/Users/benrobson/Documents/Coding/Random Programs/MLFightingGame/MLFightingGame/core/players/fighters.json')
+        if fighter_name is None:
+            fighter_name = "aggressive"  # Default fighter if none specified
+
+        fighter = FighterLoader.load_fighter(fighter_name)
+        
         # Fighter and stats
-        self.base_fighter = fighter  # Original fighter stats
-        self.fighter = self._create_modified_fighter(fighter, items)  # Modified by items
+        self.base_fighter = fighter
+        self.fighter = self._create_modified_fighter(fighter, items)
         
         # Resources
         self.gold = starting_gold
@@ -54,7 +66,14 @@ class Player(MLAgent):
         )
         
         # Player state (managed by GameEngine)
-        self.state = PlayerState()
+        self.state = PlayerStateBuilder.build(
+            player=self,
+            player_id=1,
+            spawn_x=0.0,
+            spawn_y=0.0
+        )
+
+        self.state_machine = StateMachine(self.state)
         
         # Training metrics
         self.total_reward = 0
@@ -73,14 +92,25 @@ class Player(MLAgent):
         # Start with base stats
         modified_fighter = Fighter(
             name=base_fighter.name,
+
             gravity=base_fighter.gravity,
             jump_force=base_fighter.jump_force,
+            jump_cooldown=base_fighter.jump_cooldown,
             move_speed=base_fighter.move_speed,
+
             x_attack_range=base_fighter.x_attack_range,
             y_attack_range=base_fighter.y_attack_range,
             attack_damage=base_fighter.attack_damage,
             attack_cooldown=base_fighter.attack_cooldown,
+            on_hit_stun=base_fighter.on_hit_stun,
+
+            block_efficiency=base_fighter.block_efficiency,
+            block_cooldown=base_fighter.block_cooldown,
+            on_block_stun=base_fighter.on_block_stun,
+
             health=base_fighter.health,
+            damage_reduction=base_fighter.damage_reduction,
+
             weapon=base_fighter.weapon,
             frame_data=base_fighter.frame_data
         )
@@ -95,6 +125,8 @@ class Player(MLAgent):
             modified_fighter.y_attack_range += weapon.y_attack_range_modifier
             modified_fighter.attack_damage += weapon.attack_damage_modifier
             modified_fighter.attack_cooldown += weapon.attack_cooldown_modifier
+            modified_fighter.on_hit_stun += weapon.hit_stun_frames_modifier
+            modified_fighter.on_block_stun += weapon.block_stun_frames_modifier
             modified_fighter.weapon = weapon.name
             
         # Apply armour modifiers
@@ -104,6 +136,7 @@ class Player(MLAgent):
             modified_fighter.jump_force += armour.jump_force_modifier
             modified_fighter.move_speed += armour.move_speed_modifier
             modified_fighter.health += armour.health_modifier
+            modified_fighter.damage_reduction += armour.damage_reduction_modifier
             
         return modified_fighter
         
@@ -119,11 +152,56 @@ class Player(MLAgent):
                 self.learning_parameters.apply_modifier(category, delta)
                 
         # Update ML agent parameters
-        self.update_parameters(
+        super().update_parameters(
             epsilon=self.learning_parameters.epsilon,
             epsilon_decay=self.learning_parameters.epsilon_decay,
             learning_rate=self.learning_parameters.learning_rate
         )
+
+    def get_hitbox(self) -> Tuple[float, float, float, float]:
+        """Get current hitbox as (x1, y1, x2, y2)"""
+        return (
+            self.state.x - self.state.width / 2,
+            self.state.y - self.state.height / 2,
+            self.state.x + self.state.width / 2,
+            self.state.y + self.state.height / 2
+        )
+    
+    def get_attack_hitbox(self) -> Optional[Tuple[float, float, float, float]]:
+        """Get attack hitbox if currently attacking"""
+        if not self.state.current_state == State.ATTACK_ACTIVE:
+            return None
+        
+        # Determine attack direction based on facing
+        direction = 1 if self.state.facing_right else -1
+        attack_x_offset = self.state.width / 2 * direction
+        
+        return (
+            self.state.x + attack_x_offset,
+            self.state.y - self.state.y_attack_range/ 2,
+            self.state.x + attack_x_offset + self.state.x_attack_range * direction,
+            self.state.y + self.state.y_attack_range/ 2
+        )
+
+    def can_take_action(self) -> bool:
+        """Check if player can take a new action"""
+        return self.state.current_state == State.IDLE # Could add logic in here for cancellable actions in the future
+
+    def is_action_off_cooldown(self, action: Action) -> bool:
+        """Check if a specific action is off cooldown"""
+        if action == Action.ATTACK and self.state.attack_cooldown_remaining > 0:
+            return False
+        
+        if action == Action.BLOCK and self.state.block_cooldown_remaining > 0:
+            return False
+        
+        if action == Action.JUMP and self.state.y < 0:
+            return False
+        
+        if action == Action.JUMP and self.state.jump_cooldown_remaining > 0:
+            return False
+        
+        return True
         
     def add_item(self, item_id: str, item_data: Dict):
         """Add an item to the player's inventory from shop purchase"""
@@ -189,12 +267,18 @@ class Player(MLAgent):
         Returns:
             Selected action index
         """
+
+        return Action.JUMP
+
+        """
         # Get action from ML agent
         action = super().get_action(
             state_vector, 
             available_actions, 
             epsilon=self.learning_parameters.epsilon
         )
+
+        action = Action(action)  # Ensure action is an Action enum
         
         # Decay epsilon after each action
         self.learning_parameters.epsilon = max(
@@ -203,12 +287,57 @@ class Player(MLAgent):
         )
         
         # Update ML agent's epsilon
-        self.update_parameters(epsilon=self.learning_parameters.epsilon)
+        super().update_parameters(epsilon=self.learning_parameters.epsilon)
         
         # Track actions taken
         self.actions_taken += 1
         
         return action
+        """
+
+    def request_action(self, action: Action):
+        if self.state_machine.can_transition(self.state.current_state, action):
+            new_state = self.state_machine.get_next_state(self.state.current_state, action)
+            self._enter_state(new_state)
+    
+    def update_state(self):
+        # Check for automatic transitions
+        should_transition, event = self.state_machine.should_auto_transition(self.state)
+        if should_transition:
+            new_state = self.state_machine.get_next_state(self.state.current_state, event)
+            self._enter_state(new_state)
+    
+    def _enter_state(self, new_state: State):
+        """Apply state effects when entering a new state"""
+        previous_state = self.state.current_state
+        
+        # Update state
+        self.state.current_state = new_state
+        self.state.state_frame_counter = 0
+        
+        # Apply state effects
+        effects = self.state_machine.get_state_effects(new_state)
+        for effect, value in effects.items():
+            if value == 'negative_move_speed':
+                self.state.velocity_x = -self.state.move_speed
+            elif value == 'positive_move_speed':
+                self.state.velocity_x = self.state.move_speed
+            elif value == 'negative_jump_force':
+                self.state.velocity_y = -self.state.jump_force
+            else:
+                setattr(self.state, effect, value)
+
+        # Handle cooldowns when actions complete
+        if previous_state in [State.ATTACK_RECOVERY, State.BLOCK_RECOVERY, State.JUMP_RECOVERY]:
+            if new_state == State.IDLE:
+                if previous_state == State.ATTACK_RECOVERY:
+                    self.state.attack_cooldown_remaining = self.state.attack_cooldown
+                elif previous_state == State.BLOCK_RECOVERY:
+                    self.state.block_cooldown_remaining = self.state.block_cooldown
+                elif previous_state == State.JUMP_RECOVERY:
+                    self.state.jump_cooldown_remaining = self.state.jump_cooldown
+            
+
     
     def update(self, 
                state: np.ndarray, 
@@ -297,7 +426,7 @@ class Player(MLAgent):
                 "total_reward": self.total_reward,
                 "actions_taken": self.actions_taken
             },
-            "base_fighter": self.base_fighter.to_dict(),
+            "base_fighter": self.state.fighter_name,
             "inventory": self.inventory.to_dict(),
             "learning_parameters": self.learning_parameters.to_dict()
         }

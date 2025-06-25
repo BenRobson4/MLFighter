@@ -1,4 +1,4 @@
 from .actions import Action
-from .frame_type import FrameType
+from .states import State
 
-__all__ = ['Action', 'FrameType']
+__all__ = ['Action', 'State']

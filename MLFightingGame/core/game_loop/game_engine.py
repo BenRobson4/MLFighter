@@ -1,26 +1,62 @@
 from typing import Tuple
+import logging
 
 from . import GameState
 from ..data_classes import PlayerState
 from ..players import Player
 from ..rewards import RewardRegistry
 from ..globals.actions import Action
+from ..globals.states import State
+
+logger = logging.getLogger(__name__)
 
 class GameEngine:
 
-    def __init__(self):
+    def __init__(self,
+                 state: GameState = None,
+                 player_1: Player = None,
+                 player_2: Player = None,
+                 is_recording: bool = False):
         """
         Initialize the game engine with necessary components.
         This includes setting up the game state and player objects.
         """
-        self.state = None
-        self.player_1 = None
-        self.player_2 = None
-        self.frame_counter = 0  # Track overall game frames
-        self.fight_over = False  # Flag to indicate if the game is over
+        self.state = state
+        self.player_1 = player_1
+        self.player_2 = player_2
+        self.is_recording = is_recording
+        self.frame_counter: int = 0  # Track frames this fight
+        self.fight_over: bool = False 
+        self.winner: int = 0
+
+    def set_player(self, player_id: int, player: Player):
+        """
+        Set a player for the game engine.
+        
+        Args:
+            player: Player object to be added
+            player_id: ID of the player (1 or 2)
+        """
+        if player_id == 1:
+            self.player_1 = player
+
+        elif player_id == 2:
+            self.player_2 = player
+
+        else:
+            raise ValueError("Player ID must be 1 or 2")
+
+    def set_state(self, game_state: GameState):
+        """
+        Set the current game state.
+        
+        Args:
+            game_state: GameState object representing the current state of the game
+        """
+        self.state = game_state
 
 
-    def step(self, game_state: GameState, player_1: Player, player_2: Player) -> GameState:
+    def step(self, game_state: GameState) -> GameState:
         """
         Perform a single step in the game loop, updating the game state.
         
@@ -31,9 +67,6 @@ class GameEngine:
             Updated game state after processing actions and rewards
         """
         self.state = game_state
-
-        self.player_1 = player_1
-        self.player_2 = player_2
 
         self.player_1.state = self.state.get_player(1)
         self.player_2.state = self.state.get_player(2)
@@ -47,6 +80,8 @@ class GameEngine:
         self._handle_combat()
 
         self._update_frames()
+
+        self._check_game_over()
         
         self._calculate_rewards()
 
@@ -54,10 +89,64 @@ class GameEngine:
 
         return game_state
     
+    def reset(self) -> None:
+        """
+        Reset the game engine for a new fight.
+        Resets player health, positions, and action states without recreating player objects.
+        """
+        if self.player_1 is None or self.player_2 is None:
+            logger.warning("Cannot reset game engine: players not initialized")
+            return
+        
+        # Reset fight status
+        self.fight_over = False
+        self.winner = 0
+        self.is_recording = False
+        self.frame_counter = 0
+        
+        # Reset player positions to starting positions
+        self.player_1.state.x = self.player_1.state.start_x
+        self.player_1.state.y = self.player_1.state.start_y
+        self.player_2.state.x = self.player_2.state.start_x
+        self.player_2.state.y = self.player_2.state.start_y
+        
+        # Reset velocities
+        self.player_1.state.velocity_x = 0.0
+        self.player_1.state.velocity_y = 0.0
+        self.player_2.state.velocity_x = 0.0
+        self.player_2.state.velocity_y = 0.0
+        
+        # Reset health
+        self.player_1.state.health = self.player_1.state.max_health
+        self.player_2.state.health = self.player_2.state.max_health
+        
+        # Reset action states
+        for player_state in [self.player_1.state, self.player_2.state]:
+            player_state.current_state = State.IDLE
+            player_state.state_frame_counter = 0
+            
+            # Reset status flags
+            player_state.current_state = State.IDLE
+            player_state.got_stunned = False
+            
+            # Reset total reward for this fight
+            player_state.total_reward = 0.0
+
+            # Reset last action info
+            player_state.last_action_state = None
+            player_state.last_action_choice = None
+            player_state.requested_action = None
+        
+        # Reset facing directions
+        self.player_1.state.facing_right = True
+        self.player_2.state.facing_right = False
+        
+        logger.debug("Game engine reset for new fight")
+    
     def _get_actions(self):
         """Get actions from players who can take new actions"""
         for player in [self.player_1, self.player_2]:
-            if player.state.can_take_action():
+            if player.can_take_action():
                 state_vector = self.state.get_state_vector(player.state.player_id)
                 action = player.get_action(state_vector)
                 
@@ -67,75 +156,60 @@ class GameEngine:
                 player.state.last_action_choice = action
 
     def _apply_actions(self):
-        """Apply requested actions if they are allowed"""
+        """Apply requested actions and update states using state machines"""
         for player in [self.player_1, self.player_2]:
-            if hasattr(player.state, 'requested_action'):
+            # Process requested actions
+            if hasattr(player.state, 'requested_action') and player.state.requested_action is not None:
                 action = player.state.requested_action
                 
-                # Check if action is allowed
-                if player.state.is_action_allowed(action):
-                    # Commit to the action
-                    player.state.commit_to_action(action)
-                    
-                    # Apply physics and state changes based on action
-                    if action == Action.LEFT:
-                        player.state.velocity_x = -player.state.move_speed
-                        player.state.facing_right = False
-                    elif action == Action.RIGHT:
-                        player.state.velocity_x = player.state.move_speed
-                        player.state.facing_right = True
-                    elif action == Action.JUMP:
-                        player.state.velocity_y = -player.state.jump_force
-                        player.state.is_jumping = True
-                    elif action == Action.ATTACK:
-                        player.state.is_attacking = True # Attack and block cooldowns are applied when the attack/block finishes
-                    elif action == Action.BLOCK:
-                        player.state.is_blocking = True
-                    elif action == Action.IDLE:
-                        player.state.velocity_x = 0
+                if player.is_action_off_cooldown(action):
+                    # Use state machine to check if transition is allowed
+                    if player.state_machine.can_transition(player.state.current_state, action):
+                        # Get the new state from state machine
+                        new_state = player.state_machine.get_next_state(player.state.current_state, action)
+                        
+                        # Enter the new state
+                        player._enter_state(new_state)
+                        player.state.last_action_frame = self.frame_counter
+                        player.state.action_complete = False
                 
-                # Clear the requested action
+                # Clear requested action
                 delattr(player.state, 'requested_action')
-        
 
     def _update_physics(self):
         """Update physics for all players"""
-        for player in [self.player_1.state, self.player_2.state]:
+        for player_state in [self.player_1.state, self.player_2.state]:
             # Apply gravity to all players (whether jumping or falling)
-            player.velocity_y += player.gravity
-            
-            # Update positions
-            player.x += player.velocity_x
-            player.y += player.velocity_y
+            player_state.velocity_y += player_state.gravity
+            player_state.x += player_state.velocity_x
+            player_state.y += player_state.velocity_y
             
             # Boundary checking
-            player.x = max(50, min(self.state.arena_width - 50, player.x))
+            player_state.x = max(player_state.width/2, min(self.state.arena_width - player_state.width/2, player_state.x))
             
             # Ground collision
-            if player.y >= self.state.ground_level:
-                player.y = self.state.ground_level
-                player.velocity_y = 0
-                player.is_jumping = False
-                player.jump_cooldown_remaining = player.jump_cooldown  # Reset jump cooldown
+            if player_state.y >= self.state.ground_level:
+                player_state.y = self.state.ground_level
+                player_state.velocity_y = 0
+                player_state.is_grounded = True
+                if player_state.current_state in [State.JUMP_ACTIVE, State.JUMP_RISING, State.JUMP_FALLING]:
+                    player_state.current_state = State.JUMP_RECOVERY
+                    player_state.state_frame_counter = 0  # Set to the first frame of the recovery state
+            else:
+                player_state.is_grounded = False
             
             # Apply friction/deceleration for horizontal movement
-            if not player.is_attacking and player.current_action not in [Action.LEFT, Action.RIGHT]:
-                player.velocity_x *= player.friction  # Apply friction coefficient
+            if not player_state.current_state == State.ATTACK_ACTIVE and player_state.current_state not in [State.LEFT_ACTIVE, State.RIGHT_ACTIVE]:
+                player_state.velocity_x *= player_state.friction 
     
     def _handle_combat(self):
         """Handle combat interactions between players"""
-        player1_state = self.player_1.state
-        player2_state = self.player_2.state
+        p1_attack_hitbox = self.player_1.get_attack_hitbox()
+        p2_attack_hitbox = self.player_2.get_attack_hitbox()
         
-        # Get attack hitboxes for both players
-        p1_attack_hitbox = player1_state.get_attack_hitbox()
-        p2_attack_hitbox = player2_state.get_attack_hitbox()
+        p1_hitbox = self.player_1.get_hitbox()
+        p2_hitbox = self.player_2.get_hitbox()
         
-        # Get player hitboxes
-        p1_hitbox = player1_state.get_hitbox()
-        p2_hitbox = player2_state.get_hitbox()
-        
-        # Check collisions
         p1_hits_p2 = False
         p2_hits_p1 = False
         
@@ -145,47 +219,47 @@ class GameEngine:
         if p2_attack_hitbox:
             p2_hits_p1 = self._hitboxes_overlap(p2_attack_hitbox, p1_hitbox)
         
-        # Handle combat outcomes
+        player1_state = self.player_1.state
+        player2_state = self.player_2.state
+
         if p1_hits_p2 and p2_hits_p1:
             # Both players hit - both get stunned
             player1_state.stun_frames_remaining = player1_state.on_hit_stun
             player2_state.stun_frames_remaining = player2_state.on_hit_stun
 
-            player1_state.is_stunned = True
-            player2_state.is_stunned = True
+            player1_state.got_stunned = True
+            player2_state.got_stunned = True
 
             player1_state.health -= player2_state.attack_damage * (1 - player1_state.damage_reduction)
             player2_state.health -= player1_state.attack_damage * (1 - player2_state.damage_reduction)
 
         elif p1_hits_p2:
             # Player 1 hits Player 2
-            if player2_state.is_blocking:
+            if player2_state.current_state == State.BLOCK_ACTIVE:
                 # Player 2 blocks the attack and stuns player 1 for block stun frames
                 player1_state.stun_frames_remaining = player2_state.on_block_stun
-                player1_state.is_stunned = True
+                player1_state.got_stunned = True
 
                 # Apply block damage reduction and base damage reduction
                 player2_state.health -= player1_state.attack_damage * (1 - player2_state.block_efficiency) * (1 - player2_state.damage_reduction)
             else:
                 # Player 2 does not block, so they take full damage and get stunned
                 player2_state.stun_frames_remaining = player1_state.on_hit_stun
-                player2_state.is_stunned = True
+                player2_state.got_stunned = True
 
                 # Player 2 takes damage equal to player 1's attack damage after their damage reduction is applied
                 player2_state.health -= player1_state.attack_damage * (1 - player2_state.damage_reduction)
         elif p2_hits_p1:
             # Player 2 hits Player 1 and the same results occur but in reverse
-            if player1_state.is_blocking:
+            if player1_state.current_state == State.BLOCK_ACTIVE:
                 player2_state.stun_frames_remaining = player1_state.on_block_stun
-                player2_state.is_stunned = True
+                player2_state.got_stunned = True
 
-                # Apply block damage reduction and base damage reduction
                 player1_state.health -= player2_state.attack_damage * (1 - player1_state.block_efficiency) * (1 - player1_state.damage_reduction)
             else:
                 player1_state.stun_frames_remaining = player2_state.on_hit_stun
-                player1_state.is_stunned = True
+                player1_state.got_stunned = True
 
-                # Apply damage to Player 1
                 player1_state.health -= player2_state.attack_damage * (1 - player1_state.damage_reduction)
 
     def _hitboxes_overlap(self, box1: Tuple[float, float, float, float], 
@@ -198,49 +272,62 @@ class GameEngine:
 
     def _update_frames(self):
         """Update frame counters and handle action state transitions"""
-        # Increment overall game frame counter
         if not hasattr(self, 'frame_counter'):
             self.frame_counter = 0
         self.frame_counter += 1
         
-        for player in [self.player_1.state, self.player_2.state]:
-            # Increment action frame counter for active actions
-            if player.action_frame_counter < player.action_total_frames:
-                player.action_frame_counter += 1
-            
-            # Decrement cooldown counters
-            if player.attack_cooldown_remaining > 0:
-                player.attack_cooldown_remaining -= 1
-            
-            if player.block_cooldown_remaining > 0:
-                player.block_cooldown_remaining -= 1
+        for player in [self.player_1, self.player_2]:
 
-            if player.jump_cooldown_remaining > 0:
-                player.jump_cooldown_remaining -= 1
+            if player.state.attack_cooldown_remaining > 0:
+                player.state.attack_cooldown_remaining -= 1
             
-            # Handle stun state
-            if player.stun_frames_remaining > 0:
-                player.stun_frames_remaining -= 1
-                if player.stun_frames_remaining == 0:
-                    player.is_stunned = False
+            if player.state.block_cooldown_remaining > 0:
+                player.state.block_cooldown_remaining -= 1
+
+            if player.state.jump_cooldown_remaining > 0:
+                player.state.jump_cooldown_remaining -= 1
             
-            # Reset action flags when actions complete
-            if player.action_frame_counter >= player.action_total_frames:
-                # Reset action-specific flags
-                if player.current_action == Action.ATTACK:
-                    player.is_attacking = False
-                    # Set attack cooldown when attack finishes
-                    player.attack_cooldown_remaining = player.attack_cooldown
-                
-                if player.current_action == Action.BLOCK:
-                    player.is_blocking = False
-                    # Set block cooldown when block finishes
-                    player.block_cooldown_remaining = player.block_cooldown
-                
-                # Note: is_jumping and jump_cooldown_remaining is handled in physics update when player hits ground
-                
-                # Reset to idle state
-                player.current_action = Action.IDLE
+            if player.state.stun_frames_remaining > 0:
+                player.state.stun_frames_remaining -= 1
+
+            previous_state = player.state.current_state
+            # Check for automatic transitions (frame completion, physics events, combat events)
+            player.update_state()
+            if player.state.current_state == State.IDLE and previous_state != State.IDLE:
+                player.state.action_complete = True
+            
+            # Increment state frame counter
+            player.state.state_frame_counter += 1
+
+
+    def _check_game_over(self) -> None:
+        """Check if game is over"""
+        # Game ends if time is up or a player has 0 health
+        if self.frame_counter >= self.state.max_frames:
+            self.fight_over = True
+            # Determine winner based on health
+            p1_health = self.player_1.state.health
+            p2_health = self.player_2.state.health
+            if p1_health > p2_health:
+                self.winner = 1
+            elif p2_health > p1_health:
+                self.winner = 2
+            else:
+               # Tiebreak condition is whichever player is closer to the centre
+                p1_distance_from_center = abs(self.player_1.state.x - self.state.arena_width / 2)
+                p2_distance_from_center = abs(self.player_2.state.x - self.state.arena_width / 2)
+                if p1_distance_from_center < p2_distance_from_center:
+                    self.winner = 1
+                else:
+                    self.winner = 2
+
+        
+        # Check for KO
+        for player in [self.player_1.state, self.player_2.state]:
+            player_id = player.player_id
+            if player.health <= 0:
+                self.game_over = True
+                self.winner = 2 if player_id == 1 else 1
 
         
     def _calculate_rewards(self):
@@ -262,49 +349,40 @@ class GameEngine:
         # Update ML agents for players whose actions have completed
         for player in [self.player_1, self.player_2]:
             if (player.state.last_action_state is not None and 
-                player.state.last_action_choice is not None and
-                player.state.action_frame_counter >= player.state.action_total_frames):
+                player.state.last_action_choice is not None):
                 
-                # Normalize reward by action duration (I think this should stop biases which occur based on action duration)
-                normalized_reward = player.state.accumulated_reward / player.state.action_total_frames
-                
-                # Get state vectors for ML update
-                current_state = player.state.last_action_state
-                next_state = self.state.get_state_vector(player.state.player_id)
-                self.fight_over = self.state.is_game_over()
-                
-                # Update the ML agent
-                player.update(
-                    current_state, 
-                    player.state.last_action_choice, 
-                    normalized_reward, 
-                    next_state, 
-                    self.fight_over
-                )
-                
-                # Reset for next action
-                player.state.last_action_state = None
-                player.state.last_action_choice = None
-                player.state.accumulated_reward = 0
-                player.state.action_frame_counter = 0
+                player.total_reward += player.state.accumulated_reward
+
+                if player.state.action_complete == True:
+                    # Normalize reward by action duration (I think this should stop biases which occur based on action duration)
+                    normalized_reward = player.state.accumulated_reward / (self.frame_counter - player.state.last_action_frame)
+                    
+                    current_state = player.state.last_action_state
+                    next_state = self.state.get_state_vector(player.state.player_id)
+                    
+                    player.update(
+                        current_state, 
+                        player.state.last_action_choice.value, 
+                        normalized_reward, 
+                        next_state, 
+                        self.fight_over
+                    )
+                    
+                    # Reset for next action
+                    player.state.last_action_state = None
+                    player.state.last_action_choice = None
+                    player.state.accumulated_reward = 0
 
     def _end_frame_checks(self):
         """Perform end-of-frame checks and cleanup"""
         
-        # Section 1: Health Validation
         self._validate_player_health()
         
-        # Section 2: Position Validation
         self._validate_player_positions()
-        
-        # Section 3: State Consistency Checks
-        self._validate_state_consistency()
-        
-        # Section 4: Fight Recording
+            
         if self.is_recording:
             self._record_frame()
         
-        # Section 5: Save Recording on Fight End
         if self.fight_over and self.is_recording:
             self._save_replay()
 
@@ -316,40 +394,23 @@ class GameEngine:
     def _validate_player_positions(self):
         """Ensure players are within valid game boundaries"""
         for player in [self.player_1.state, self.player_2.state]:
-            if player.y > self.state.ground_level:
+            if player.y >= self.state.ground_level:
                 player.y = self.state.ground_level
                 player.velocity_y = 0
-                player.is_jumping = False
             
             player.x = max(50, min(self.state.arena_width - 50, player.x))
-
-    def _validate_state_consistency(self):
-        """Check for and fix any inconsistent state combinations"""
-        for player in [self.player_1.state, self.player_2.state]:
-            if player.is_stunned and player.stun_frames_remaining <= 0:
-                player.is_stunned = False
-            
-            if player.y >= self.state.ground_level and player.is_jumping:
-                player.is_jumping = False
-            
-            if player.is_blocking and player.is_attacking:
-                if player.current_action == Action.BLOCK:
-                    player.is_attacking = False
-                else:
-                    player.is_blocking = False
 
     def _record_frame(self):
         """Record current frame data for replay"""
         if not hasattr(self, 'replay_data'):
-            # Initialize replay data with fight metadata
             self.replay_data = {
                 'metadata': {
                     'arena_width': self.state.arena_width,
                     'ground_level': self.state.ground_level,
                     'max_frames': self.state.max_frames,
                     'player_configs': {
-                        1: self._get_player_config(self.player_1.state),
-                        2: self._get_player_config(self.player_2.state)
+                        1: self.player_1.state.fighter_name,
+                        2: self.player_2.state.fighter_name
                     }
                 },
                 'frames': []
@@ -357,43 +418,41 @@ class GameEngine:
         
         # Record only essential frame data
         frame_data = {
-            'f': self.frame_counter,  # frame number
+            'f': self.frame_counter, 
             'p1': self._compress_player_state(self.player_1.state),
             'p2': self._compress_player_state(self.player_2.state)
         }
         
         self.replay_data['frames'].append(frame_data)
 
-    def _get_player_config(self, player_state: PlayerState) -> dict:
-        """Get static player configuration for replay metadata"""
-        return {
-            'fighter_type': player_state.fighter_type,
-            'max_health': player_state.max_health,
-            'attack_damage': player_state.attack_damage,
-            'width': player_state.width,
-            'height': player_state.height,
-            'gravity': player_state.gravity,
-            'action_durations': player_state.action_durations
-        }
-
     def _compress_player_state(self, player_state: PlayerState) -> dict:
         """Compress player state to minimal data needed for replay"""
         return {
             'x': round(player_state.x, 1),
             'y': round(player_state.y, 1),
-            'h': round(player_state.health, 1),  # health
-            'a': player_state.current_action.value,  # action
+            'h': round(player_state.health, 1), 
+            'a': player_state.current_action.value,  
             'fr': player_state.facing_right,
             'flags': self._pack_boolean_flags(player_state)  # Pack multiple booleans into single int
         }
 
     def _pack_boolean_flags(self, player_state: PlayerState) -> int:
-        """Pack boolean flags into a single integer for compression"""
+        """Pack state information into a single integer for compression"""
         flags = 0
-        if player_state.is_jumping: flags |= 1
-        if player_state.is_blocking: flags |= 2
-        if player_state.is_attacking: flags |= 4
-        if player_state.is_stunned: flags |= 8
+        
+        # Pack attack_state (3 bits, positions 0-2)
+        flags |= (player_state.attack_state.value & 0x7)
+        
+        # Pack block_state (3 bits, positions 3-5)
+        flags |= ((player_state.block_state.value & 0x7) << 3)
+        
+        # Pack jump_state (3 bits, positions 6-8)
+        flags |= ((player_state.jump_state.value & 0x7) << 6)
+        
+        # Pack is_stunned (1 bit, position 9)
+        if player_state.is_stunned:
+            flags |= (1 << 9)
+        
         return flags
 
     def _save_replay(self):
@@ -411,6 +470,6 @@ class GameEngine:
         filename = f"replay_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json.gz"
         
         with gzip.open(filename, 'wt') as f:
-            json.dump(self.replay_data, f, separators=(',', ':'))  # No whitespace for smaller file
+            json.dump(self.replay_data, f, separators=(',', ':')) 
         
         print(f"Replay saved: {filename}")
