@@ -1,14 +1,78 @@
 from .fighter_config import Fighter
 from .weapon_manager import WeaponManager
 from .weapon_config import Weapon
+from ..core.frame_data import FighterFrameData, ActionFrameData
+from ..core.actions import Action
 
 class FighterManager:
     """Class to hold fighter information"""
+    
     def fighter_list(self):
         return ['Default', 'Ben', 'Speedy', 'Tanky']
     
+    def get_fighter_frame_data(self, fighter: str) -> FighterFrameData:
+        """Get custom frame data for each fighter"""
+        match fighter:
+            case 'Default':
+                return FighterFrameData(
+                    action_frame_data={
+                        Action.LEFT: ActionFrameData(total_frames=5, movement_locked=False),
+                        Action.RIGHT: ActionFrameData(total_frames=5, movement_locked=False),
+                        Action.JUMP: ActionFrameData(total_frames=3, can_cancel_after=2),
+                        Action.BLOCK: ActionFrameData(total_frames=10, movement_locked=True),
+                        Action.ATTACK: ActionFrameData(
+                            total_frames=30,
+                            startup_frames=5,
+                            active_frames=10,
+                            recovery_frames=15,
+                            movement_locked=True
+                        ),
+                        Action.IDLE: ActionFrameData(total_frames=1, movement_locked=False)
+                    }
+                )
+            
+            case 'Speedy':
+                return FighterFrameData(
+                    action_frame_data={
+                        Action.LEFT: ActionFrameData(total_frames=3, movement_locked=False),
+                        Action.RIGHT: ActionFrameData(total_frames=3, movement_locked=False),
+                        Action.JUMP: ActionFrameData(total_frames=2, can_cancel_after=1),
+                        Action.BLOCK: ActionFrameData(total_frames=5, movement_locked=True),
+                        Action.ATTACK: ActionFrameData(
+                            total_frames=10,
+                            startup_frames=2,
+                            active_frames=3,
+                            recovery_frames=5,
+                            movement_locked=True
+                        ),
+                        Action.IDLE: ActionFrameData(total_frames=1, movement_locked=False)
+                    }
+                )
+            
+            case 'Tanky':
+                return FighterFrameData(
+                    action_frame_data={
+                        Action.LEFT: ActionFrameData(total_frames=10, movement_locked=False),
+                        Action.RIGHT: ActionFrameData(total_frames=10, movement_locked=False),
+                        Action.JUMP: ActionFrameData(total_frames=8, can_cancel_after=6),
+                        Action.BLOCK: ActionFrameData(total_frames=10, movement_locked=True),
+                        Action.ATTACK: ActionFrameData(
+                            total_frames=60,
+                            startup_frames=10,
+                            active_frames=20,
+                            recovery_frames=30,
+                            movement_locked=True
+                        ),
+                        Action.IDLE: ActionFrameData(total_frames=1, movement_locked=False)
+                    }
+                )
+            
+            case _:
+                return FighterFrameData.get_default()
+    
     def retrieve_fighter_base_stats(self, fighter: str) -> Fighter:
-
+        frame_data = self.get_fighter_frame_data(fighter)
+        
         match fighter:
             case 'Default':
                 return Fighter(name='Default',
@@ -20,7 +84,8 @@ class FighterManager:
                                attack_damage=10, 
                                attack_cooldown=30, 
                                health=100, 
-                               weapon='Default'
+                               weapon='Default',
+                               frame_data=frame_data
                                )
             
             case 'Ben':

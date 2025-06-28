@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://cgsgf0fciw5tn"]
+
+[ext_resource type="PackedScene" uid="uid://sa2p8h1xwn06" path="res://scenes/GameWorld.tscn" id="1_rvslj"]
+
+[node name="Main" type="Node"]
+
+[node name="GameWorld" parent="." instance=ExtResource("1_rvslj")]
+
+[node name="NetworkClient" type="Node" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]

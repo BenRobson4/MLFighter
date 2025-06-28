@@ -2,10 +2,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from collections import deque
+from collections import deque, defaultdict
 import random
 from typing import Dict, List, Any, Tuple, Set
 import numpy as np
+import json
 
 from .base_agent import MLAgent
 from .agent_config import AgentConfig
@@ -16,7 +17,7 @@ from ..ui.option_selector import AgentOption
 class AdaptiveConfig:
     """Configuration for adaptive agent with feature masking and reward shaping"""
     
-    def __init__(self, fighter: str = 'Default'):
+    def __init__(self, fighter: str = 'Default', reward_weights: Dict[str, float] = None):
         # Fighter type (can be used for specific configurations)
         self.fighter = fighter
 
@@ -34,16 +35,23 @@ class AdaptiveConfig:
             'player_health', 'opponent_health', 'distance_x'
         }
         
-        # Reward weights
-        self.reward_weights = {
-            'health_gain': 1.0,
-            'damage_dealt': 1.0,
-            'win_bonus': 100.0,
-            'loss_penalty': -100.0,
-            'distance_bonus': 0.0,
-            'aggression_bonus': 0.0,
-            'defense_bonus': 0.0
-        }
+        # Load available rewards from config
+        with open("fighting_game/config/game_config.json", 'r') as f:
+            config = json.load(f)
+        
+        reward_system = config['reward_system']
+        self.available_rewards = reward_system['available_rewards']
+        
+        # Initialize reward weights with defaults if not provided
+        if reward_weights is None:
+            self.reward_weights = {}
+            for reward_name, reward_info in self.available_rewards.items():
+                if reward_name in reward_system['default_active_rewards']:
+                    self.reward_weights[reward_name] = reward_info['default']
+                else:
+                    self.reward_weights[reward_name] = 0.0
+        else:
+            self.reward_weights = reward_weights
         
         # Network architecture (fixed for all features)
         self.hidden_layers = [256, 128, 64]  # Large enough for all features
@@ -163,6 +171,9 @@ class AdaptiveDQNAgent(MLAgent):
         # Feature mask
         self.feature_mask = None
         self.update_feature_mask()
+        
+        # Track reward statistics
+        self.reward_stats = defaultdict(float)
     
     def update_feature_mask(self):
         """Update the feature mask based on active features"""
@@ -211,51 +222,18 @@ class AdaptiveDQNAgent(MLAgent):
         
         return Action(action_idx)
     
-    def calculate_shaped_reward(self, state: np.ndarray, action: Action, 
-                               next_state: np.ndarray, base_reward: float, 
-                               done: bool, info: Dict[str, Any] = None) -> float:
-        """Calculate shaped reward based on configuration"""
-        shaped_reward = 0.0
-        w = self.config.reward_weights
-        
-        # Base health rewards
-        if info:
-            health_gain = info.get('health_change', 0)
-            damage_dealt = info.get('damage_dealt', 0)
-            
-            shaped_reward += w['health_gain'] * health_gain
-            shaped_reward += w['damage_dealt'] * damage_dealt
-            
-            # Distance-based rewards
-            if w['distance_bonus'] != 0:
-                distance = state[18] if len(state) > 18 else 0  # distance_x feature
-                shaped_reward += w['distance_bonus'] * (1 - distance)
-            
-            # Action-based rewards
-            if action == Action.ATTACK:
-                shaped_reward += w['aggression_bonus']
-            elif action == Action.BLOCK:
-                shaped_reward += w['defense_bonus']
-        
-        # Win/loss rewards
-        if done:
-            if base_reward > 0:  # Won
-                shaped_reward += w['win_bonus']
-            else:  # Lost
-                shaped_reward += w['loss_penalty']
-        
-        return shaped_reward + base_reward * 0.1  # Include some base reward
-    
     def update(self, state: np.ndarray, action: Action, reward: float,
                next_state: np.ndarray, done: bool, info: Dict[str, Any] = None):
         """Update the agent with new experience"""
-        # Calculate shaped reward
-        shaped_reward = self.calculate_shaped_reward(
-            state, action, next_state, reward, done, info
-        )
+        # The reward is already shaped by the reward system, so we use it directly
+        
+        # Track reward components for analysis
+        if info:
+            for reward_type, value in info.items():
+                self.reward_stats[reward_type] += value
         
         # Store experience
-        self.memory.append((state, action.value, shaped_reward, next_state, done))
+        self.memory.append((state, action.value, reward, next_state, done))
         
         # Update step counter
         self.steps += 1
@@ -335,7 +313,8 @@ class AdaptiveDQNAgent(MLAgent):
             'steps': self.steps,
             'episodes': self.episodes,
             'memory': list(self.memory),  # Save experience replay
-            'losses': self.losses[-1000:] if len(self.losses) > 1000 else self.losses  # Save recent losses
+            'losses': self.losses[-1000:] if len(self.losses) > 1000 else self.losses,  # Save recent losses
+            'reward_stats': dict(self.reward_stats)  # Save reward statistics
         }, filepath)
 
     @classmethod
@@ -344,8 +323,15 @@ class AdaptiveDQNAgent(MLAgent):
         checkpoint = torch.load(filepath, map_location='cpu')
         
         # Create agent with saved configuration
-        agent = cls(checkpoint['config'], player_id)
+        config = checkpoint['config']
         
+        # Ensure reward weights are preserved
+        if hasattr(config, 'reward_weights'):
+            agent = cls(config, player_id)
+        else:
+            # Handle old saves without reward weights
+            agent = cls(AdaptiveConfig(fighter=config.fighter), player_id)
+
         # Load network states
         agent.q_network.load_state_dict(checkpoint['q_network_state'])
         agent.target_network.load_state_dict(checkpoint['target_network_state'])
@@ -363,6 +349,10 @@ class AdaptiveDQNAgent(MLAgent):
         # Restore losses if available
         if 'losses' in checkpoint:
             agent.losses = checkpoint['losses']
+            
+        # Restore reward stats if available
+        if 'reward_stats' in checkpoint:
+            agent.reward_stats = defaultdict(float, checkpoint['reward_stats'])
         
         return agent
 
@@ -372,19 +362,25 @@ class AdaptiveDQNAgent(MLAgent):
         return AgentOption(
             fighter=self.config.fighter,
             features=set(self.config.active_features),
-            epsilon=self.epsilon,  # Use current epsilon, not config
+            epsilon=self.epsilon,
             decay=self.config.epsilon_decay,
-            learning_rate=self.config.learning_rate
+            learning_rate=self.config.learning_rate,
+            reward_weights=dict(self.config.reward_weights)  # Include reward weights
         )
     
     def get_stats(self) -> Dict[str, Any]:
         """Get training statistics"""
         return {
             'epsilon': self.epsilon,
-            'steps': self.steps,
+            '': self.steps,
             'episodes': self.episodes,
             'memory_size': len(self.memory),
             'avg_loss': np.mean(self.losses[-100:]) if self.losses else 0,
             'active_features': list(self.config.active_features),
-            'learning_rate': self.config.learning_rate
+            'learning_rate': self.config.learning_rate,
+            'reward_breakdown': dict(self.reward_stats)  # Include reward statistics
         }
+    
+    def reset_reward_stats(self):
+        """Reset reward statistics (useful between training rounds)"""
+        self.reward_stats.clear()

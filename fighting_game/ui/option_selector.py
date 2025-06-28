@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import List, Dict, Set, Tuple, Optional
 from dataclasses import dataclass
+import json
 from ..config.fighter_manager import FighterManager
 
 from ..config.config_manager import ConfigManager
@@ -16,6 +17,20 @@ class AgentOption:
     epsilon: float
     decay: float
     learning_rate: float
+    reward_weights: Dict[str, float] = None  # New field
+    
+    def __post_init__(self):
+        """Initialize reward weights if not provided"""
+        if self.reward_weights is None:
+            self.reward_weights = {
+                'health_gain': 1.0,
+                'damage_dealt': 1.0,
+                'win_bonus': 100.0,
+                'loss_penalty': -100.0,
+                'distance_bonus': 0.0,
+                'aggression_bonus': 0.0,
+                'defense_bonus': 0.0
+            }
     
     def to_dict(self) -> Dict:
         return {
@@ -23,7 +38,18 @@ class AgentOption:
             'features': list(self.features),
             'epsilon': self.epsilon,
             'decay': self.decay,
-            'learning_rate': self.learning_rate
+            'learning_rate': self.learning_rate,
+            'reward_weights': self.reward_weights
+        }
+    
+    def to_dict(self) -> Dict:
+        return {
+            'fighter': self.fighter,
+            'features': list(self.features),
+            'epsilon': self.epsilon,
+            'decay': self.decay,
+            'learning_rate': self.learning_rate,
+            'reward_weights': self.reward_weights
         }
 
 
@@ -88,7 +114,8 @@ class OptionGenerator:
                         features=features,
                         epsilon=round(epsilon, 3),
                         decay=round(decay, 4),
-                        learning_rate=round(learning_rate, 5)
+                        learning_rate=round(learning_rate, 5),
+                        reward_weights=None
                     ))
                     break
                 
@@ -122,7 +149,8 @@ class OptionSelectorUI:
                 features=set(current_config.features),
                 epsilon=current_config.epsilon,
                 decay=current_config.decay,
-                learning_rate=current_config.learning_rate
+                learning_rate=current_config.learning_rate,
+                reward_weights=current_config.reward_weights
             )
         else:
             self.current_config = None
@@ -232,7 +260,8 @@ class OptionSelectorUI:
                 features=set(self.selected_option.features),
                 epsilon=self.selected_option.epsilon,
                 decay=self.selected_option.decay,
-                learning_rate=self.selected_option.learning_rate
+                learning_rate=self.selected_option.learning_rate,
+                reward_weights=dict(self.selected_option.reward_weights) if self.selected_option.reward_weights else None
             )
             
             # Hide selection, show modification
@@ -391,6 +420,180 @@ class OptionSelectorUI:
         if (self.remaining_tokens < lr_cost or 
             self.current_config.learning_rate + lr_delta > lr_range["max"]):
             lr_plus.config(state='disabled')
+
+        # Add reward weight modification button
+        reward_cost = self.config.get_cost("modify_reward_weights")
+        ttk.Label(parent, text=f"Modify Reward Weights ({reward_cost} tokens):").grid(
+            row=row, column=0, sticky=tk.W)
+        
+        reward_btn = ttk.Button(parent, text="Adjust Rewards", 
+                               command=self.modify_reward_weights)
+        reward_btn.grid(row=row, column=1, padx=5)
+        if self.remaining_tokens < reward_cost:
+            reward_btn.config(state='disabled')
+        row += 1
+        
+        # Show current reward weights summary
+        weights_summary = self.get_reward_weights_summary()
+        ttk.Label(parent, text=weights_summary, font=('Arial', 9)).grid(
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=5)
+    
+    def get_reward_weights_summary(self) -> str:
+        """Get a summary of non-default reward weights"""
+        weights = self.current_config.reward_weights
+        non_default = []
+        
+        default_weights = {
+            'health_gain': 1.0,
+            'damage_dealt': 1.0,
+            'win_bonus': 100.0,
+            'loss_penalty': -100.0,
+            'distance_bonus': 0.0,
+            'aggression_bonus': 0.0,
+            'defense_bonus': 0.0
+        }
+        
+        for key, value in weights.items():
+            if value != default_weights.get(key, 0):
+                non_default.append(f"{key}: {value:.1f}")
+        
+        if non_default:
+            return "Modified rewards: " + ", ".join(non_default)
+        return "Reward weights: Default"
+    
+    def modify_reward_weights(self):
+        """Show reward weight modification dialog"""
+        cost = self.config.get_cost("modify_reward_weight")
+        if self.remaining_tokens < cost:
+            return
+        
+        # Load available rewards from config
+        with open("fighting_game/config/game_config.json", 'r') as f:
+            game_config = json.load(f)
+        
+        available_rewards = game_config['reward_system']['available_rewards']
+        
+        # Create dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Modify Reward Weights")
+        dialog.geometry("600x700")
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(dialog)
+        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        ttk.Label(scrollable_frame, text="Adjust Reward Weights", 
+                font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        ttk.Label(scrollable_frame, text=f"Cost: {cost} token per modification", 
+                font=('Arial', 10)).pack()
+        
+        # Track modifications
+        self.reward_modifications = {}
+        weight_vars = {}
+        weight_labels = {}
+        
+        # Create controls for each reward
+        for reward_name, reward_info in available_rewards.items():
+            frame = ttk.Frame(scrollable_frame)
+            frame.pack(fill=tk.X, padx=20, pady=5)
+            
+            # Reward name and description
+            ttk.Label(frame, text=f"{reward_name.replace('_', ' ').title()}:",
+                    font=('Arial', 10, 'bold')).pack(anchor=tk.W)
+            ttk.Label(frame, text=reward_info['description'],
+                    font=('Arial', 8), foreground='gray').pack(anchor=tk.W)
+            
+            # Current value
+            current_val = self.current_config.reward_weights.get(reward_name, 0.0)
+            
+            # Value display and modification buttons
+            control_frame = ttk.Frame(frame)
+            control_frame.pack(anchor=tk.W, pady=2)
+            
+            value_label = ttk.Label(control_frame, text=f"{current_val:.1f}", width=8)
+            value_label.pack(side=tk.LEFT, padx=5)
+            weight_labels[reward_name] = value_label
+            
+            # Store original value
+            weight_vars[reward_name] = {'original': current_val, 'current': current_val}
+            
+            # Modification buttons
+            def modify_weight(name, delta):
+                current = weight_vars[name]['current']
+                new_val = round(current + delta, 1)
+                new_val = max(-100, min(100, new_val))  # Clamp to reasonable range
+                
+                weight_vars[name]['current'] = new_val
+                weight_labels[name].config(text=f"{new_val:.1f}")
+                
+                # Track if modified
+                if new_val != weight_vars[name]['original']:
+                    self.reward_modifications[name] = new_val
+                elif name in self.reward_modifications:
+                    del self.reward_modifications[name]
+                
+                # Update cost display
+                update_cost_display()
+            
+            ttk.Button(control_frame, text="-10", 
+                    command=lambda n=reward_name: modify_weight(n, -10)).pack(side=tk.LEFT, padx=2)
+            ttk.Button(control_frame, text="-1", 
+                    command=lambda n=reward_name: modify_weight(n, -1)).pack(side=tk.LEFT, padx=2)
+            ttk.Button(control_frame, text="+1", 
+                    command=lambda n=reward_name: modify_weight(n, 1)).pack(side=tk.LEFT, padx=2)
+            ttk.Button(control_frame, text="+10", 
+                    command=lambda n=reward_name: modify_weight(n, 10)).pack(side=tk.LEFT, padx=2)
+            
+            # Reset button
+            ttk.Button(control_frame, text="Reset",
+                    command=lambda n=reward_name: modify_weight(n, 
+                        weight_vars[n]['original'] - weight_vars[n]['current'])).pack(side=tk.LEFT, padx=5)
+        
+        # Cost display
+        cost_label = ttk.Label(dialog, text="", font=('Arial', 10, 'bold'))
+        cost_label.pack(pady=5)
+        
+        def update_cost_display():
+            num_modifications = len(self.reward_modifications)
+            total_cost = num_modifications * cost
+            cost_label.config(text=f"Modifications: {num_modifications}, Total Cost: {total_cost} tokens")
+            
+            # Enable/disable apply button
+            if total_cost <= self.remaining_tokens:
+                apply_btn.config(state='normal')
+            else:
+                apply_btn.config(state='disabled')
+        
+        # Apply button
+        def apply_weights():
+            total_cost = len(self.reward_modifications) * cost
+            if total_cost <= self.remaining_tokens:
+                # Apply all modifications
+                for reward_name, new_value in self.reward_modifications.items():
+                    self.current_config.reward_weights[reward_name] = new_value
+                
+                self.remaining_tokens -= total_cost
+                self.update_display()
+                dialog.destroy()
+        
+        apply_btn = ttk.Button(dialog, text="Apply Changes", command=apply_weights)
+        apply_btn.pack(pady=10)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        update_cost_display()
     
     def unlock_feature(self):
         """Show feature unlock dialog"""

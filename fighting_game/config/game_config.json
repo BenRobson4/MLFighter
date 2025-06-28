@@ -66,5 +66,59 @@
   "initial_options": {
     "num_options": 3,
     "features_per_option": 3
+  },
+  "reward_system": {
+    "available_rewards": {
+      "attack_landed": {
+        "default": 10.0,
+        "description": "Successfully hit opponent with attack"
+      },
+      "attack_missed": {
+        "default": -2.0,
+        "description": "Attack attempted but missed"
+      },
+      "successful_block": {
+        "default": 5.0,
+        "description": "Successfully blocked opponent's attack"
+      },
+      "failed_block": {
+        "default": -3.0,
+        "description": "Attempted block but still got hit"
+      },
+      "distance_penalty": {
+        "default": -1.0,
+        "description": "Penalty based on distance from opponent (per unit)"
+      },
+      "jump_penalty": {
+        "default": -0.5,
+        "description": "Penalty for jumping (to discourage excessive jumping)"
+      },
+      "health_lost": {
+        "default": -1.0,
+        "description": "Penalty per health point lost"
+      },
+      "win_bonus": {
+        "default": 100.0,
+        "description": "Bonus for winning the match"
+      },
+      "loss_penalty": {
+        "default": -100.0,
+        "description": "Penalty for losing the match"
+      },
+      "dodged_attack": {
+        "default": 3.0,
+        "description": "Opponent's attack missed without blocking"
+      },
+      "opponent_in_range": {
+        "default": 1.0,
+        "description": "Bonus when opponent is within attack range"
+      }
+    },
+    "default_active_rewards": [
+      "attack_landed",
+      "health_lost",
+      "win_bonus",
+      "loss_penalty"
+    ]
   }
 }

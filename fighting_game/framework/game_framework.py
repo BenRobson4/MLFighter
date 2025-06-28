@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from ..core import GameEngine, Action
 from ..agents import MLAgent
 from ..replay import ReplayRecorder
@@ -14,6 +14,11 @@ class FightingGameFramework:
         self.game_history = []
         self.record_replays = record_replays
         self.recorder = ReplayRecorder() if record_replays else None
+        
+        # Set reward weights for each player in the engine
+        for player_id, agent in self.agents.items():
+            if hasattr(agent, 'config') and hasattr(agent.config, 'reward_weights'):
+                self.engine.set_reward_weights(player_id, agent.config.reward_weights)
     
     def run_episode(self, record: Optional[bool] = None) -> Dict:
         """Run a complete game episode"""
@@ -28,6 +33,7 @@ class FightingGameFramework:
         
         self.engine.reset()
         episode_data = []
+        all_reward_events = []  # Track all reward events
         
         while not self.engine.state.game_over:
             # Get current state
@@ -42,8 +48,11 @@ class FightingGameFramework:
                 'player2': self.agents['player2'].get_action(current_state['player2'])
             }
             
-            # Execute game step
-            new_state, rewards = self.engine.step(actions['player1'], actions['player2'])
+            # Execute game step - now returns events too
+            new_state, rewards, events = self.engine.step(actions['player1'], actions['player2'])
+            
+            # Store reward events
+            all_reward_events.extend(events)
             
             # Record frame if recording
             if should_record and self.recorder:
@@ -55,6 +64,12 @@ class FightingGameFramework:
                 'player2': new_state.get_state_vector('player2')
             }
             
+            # Create info dict with reward event details for each player
+            info_dicts = {
+                'player1': self._create_info_dict('player1', events),
+                'player2': self._create_info_dict('player2', events)
+            }
+            
             # Update agents
             for player_id in ['player1', 'player2']:
                 self.agents[player_id].update(
@@ -62,7 +77,8 @@ class FightingGameFramework:
                     actions[player_id],
                     rewards[player_id],
                     new_state_vectors[player_id],
-                    new_state.game_over
+                    new_state.game_over,
+                    info_dicts[player_id]  # Pass the info dict
                 )
             
             # Store episode data
@@ -71,13 +87,17 @@ class FightingGameFramework:
                 'actions': actions,
                 'rewards': rewards,
                 'new_states': new_state_vectors,
-                'done': new_state.game_over
+                'done': new_state.game_over,
+                'events': events  # Include events in episode data
             })
         
         # Stop recording and get filename
         replay_file = None
         if should_record and self.recorder:
             replay_file = self.recorder.stop_recording()
+        
+        # Get reward summary from engine
+        reward_summary = self.engine.reward_calculator.get_reward_summary()
         
         return {
             'winner': self.engine.state.winner,
@@ -87,5 +107,30 @@ class FightingGameFramework:
                 'player2': self.engine.state.players['player2']['health']
             },
             'episode_data': episode_data,
-            'replay_file': replay_file
+            'replay_file': replay_file,
+            'reward_events': all_reward_events,
+            'reward_summary': reward_summary
         }
+    
+    def _create_info_dict(self, player_id: str, events: List) -> Dict:
+        """Create info dictionary from reward events for a specific player"""
+        info = {}
+        
+        # Extract relevant events for this player
+        player_events = [e for e in events if e.player_id == player_id]
+        
+        # Aggregate events by type
+        for event in player_events:
+            if event.reward_type not in info:
+                info[event.reward_type] = 0
+            info[event.reward_type] += event.details.get('base_value', 0)
+        
+        return info
+    
+    def update_reward_weights(self, player_id: str, weights: Dict[str, float]):
+        """Update reward weights for a specific player"""
+        if player_id in self.agents:
+            agent = self.agents[player_id]
+            if hasattr(agent, 'config'):
+                agent.config.update_reward_weights(weights)
+            self.engine.set_reward_weights(player_id, weights)

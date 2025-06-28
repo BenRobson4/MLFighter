@@ -1,11 +1,13 @@
 import numpy as np
 from typing import Dict, Optional
 from ..config.fighter_config import Fighter
+from ..config.global_constants import ARENA_WIDTH, ARENA_HEIGHT
+from .actions import Action
 
 class GameState:
     """Represents the current state of the fighting game"""
     
-    def __init__(self, arena_width: int = 800, arena_height: int = 300, 
+    def __init__(self, arena_width: int = ARENA_WIDTH, arena_height: int = ARENA_HEIGHT, 
                  player1_stats: Optional[Fighter] = None, 
                  player2_stats: Optional[Fighter] = None):
         self.arena_width = arena_width
@@ -18,8 +20,8 @@ class GameState:
         
         # Player states
         self.players = {
-            'player1': self._create_player_state(200, player1_stats),
-            'player2': self._create_player_state(300, player2_stats)
+            'player1': self._create_player_state(self.arena_width/5, player1_stats),
+            'player2': self._create_player_state(4*self.arena_width/5, player2_stats)
         }
         
         self.game_over = False
@@ -28,7 +30,6 @@ class GameState:
         
     def _create_player_state(self, x_pos: int, player_stats: Optional[Fighter] = None) -> Dict:
         """Create initial player state"""
-        # Use fighter's health if provided, otherwise default to 100
         health = player_stats.health if player_stats else 100
         
         return {
@@ -40,10 +41,20 @@ class GameState:
             'is_jumping': False,
             'is_blocking': False,
             'is_attacking': False,
-            'attack_cooldown': 0,
-            'facing_right': True
+            'attack_cooldown': 0,  # Keep for backward compatibility
+            'facing_right': True,
+            
+            # Frame data tracking
+            'current_action': Action.IDLE,
+            'action_frame': 0,  # Current frame of the action
+            'action_locked': False,  # Whether input is locked
+            'input_buffer': None,  # Buffered input during locked state
+            
+            # Attack hit tracking
+            'has_hit_opponent': False,  # Whether current attack has already hit
+            'attack_id': 0,  # Unique ID for each attack to track hits
         }
-    
+        
     def get_state_vector(self, player_id: str) -> np.ndarray:
         """Convert game state to feature vector for ML model"""
         p1 = self.players['player1']
