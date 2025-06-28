@@ -1,3 +1,5 @@
+import numpy as np
+
 from ..data_classes import PlayerState
 from ..globals.actions import Action
 from ..globals.states import State
@@ -6,6 +8,11 @@ class StateMachine:
     def __init__(self, player_state: PlayerState):
         """Initialize with frame data configuration only"""
         self.frame_data = player_state.frame_data
+        self.actionable_states = [
+            State.IDLE,
+            State.JUMP_RISING,
+            State.JUMP_FALLING
+        ]
         self.transitions = self._setup_transitions()
     
     def _setup_transitions(self) -> dict:
@@ -15,28 +22,28 @@ class StateMachine:
         # Attack sequence
         transitions[(State.ATTACK_STARTUP, 'frame_complete')] = State.ATTACK_ACTIVE
         transitions[(State.ATTACK_ACTIVE, 'frame_complete')] = State.ATTACK_RECOVERY
-        transitions[(State.ATTACK_RECOVERY, 'frame_complete')] = State.IDLE
+        transitions[(State.ATTACK_RECOVERY, 'frame_complete')] = 'smart_return'
         
         # Block sequence
         transitions[(State.BLOCK_STARTUP, 'frame_complete')] = State.BLOCK_ACTIVE
         transitions[(State.BLOCK_ACTIVE, 'frame_complete')] = State.BLOCK_RECOVERY
-        transitions[(State.BLOCK_RECOVERY, 'frame_complete')] = State.IDLE
+        transitions[(State.BLOCK_RECOVERY, 'frame_complete')] = 'smart_return'
         
         # Jump sequence
         transitions[(State.JUMP_STARTUP, 'frame_complete')] = State.JUMP_ACTIVE
         transitions[(State.JUMP_ACTIVE, 'frame_complete')] = State.JUMP_RISING
         transitions[(State.JUMP_RISING, 'peak_reached')] = State.JUMP_FALLING
         transitions[(State.JUMP_FALLING, 'landed')] = State.JUMP_RECOVERY
-        transitions[(State.JUMP_RECOVERY, 'frame_complete')] = State.IDLE
+        transitions[(State.JUMP_RECOVERY, 'frame_complete')] = 'smart_return'
 
         # Movement sequence
         transitions[(State.LEFT_STARTUP, 'frame_complete')] = State.LEFT_ACTIVE
         transitions[(State.LEFT_ACTIVE, 'frame_complete')] = State.LEFT_RECOVERY
-        transitions[(State.LEFT_RECOVERY, 'frame_complete')] = State.IDLE
+        transitions[(State.LEFT_RECOVERY, 'frame_complete')] = 'smart_return'
 
         transitions[(State.RIGHT_STARTUP, 'frame_complete')] = State.RIGHT_ACTIVE
         transitions[(State.RIGHT_ACTIVE, 'frame_complete')] = State.RIGHT_RECOVERY
-        transitions[(State.RIGHT_RECOVERY, 'frame_complete')] = State.IDLE
+        transitions[(State.RIGHT_RECOVERY, 'frame_complete')] = 'smart_return'
 
         # Stun cases
         for state in [
@@ -58,13 +65,14 @@ class StateMachine:
             State.JUMP_RECOVERY
             ]:
             transitions[(state, 'stunned')] = State.STUNNED
-        transitions[(State.STUNNED, 'stun_over')] = State.IDLE
-        
+        transitions[(State.STUNNED, 'stun_over')] = 'smart_return'
+
         # Input-based transitions
-        transitions[(State.IDLE, Action.LEFT)] = State.LEFT_STARTUP
-        transitions[(State.IDLE, Action.RIGHT)] = State.RIGHT_STARTUP
-        transitions[(State.IDLE, Action.ATTACK)] = State.ATTACK_STARTUP
-        transitions[(State.IDLE, Action.BLOCK)] = State.BLOCK_STARTUP
+        for state in self.actionable_states:
+            transitions[(state, Action.LEFT)] = State.LEFT_STARTUP
+            transitions[(state, Action.RIGHT)] = State.RIGHT_STARTUP
+            transitions[(state, Action.ATTACK)] = State.ATTACK_STARTUP
+            transitions[(state, Action.BLOCK)] = State.BLOCK_STARTUP
         transitions[(State.IDLE, Action.JUMP)] = State.JUMP_STARTUP
         
         return transitions
@@ -101,16 +109,37 @@ class StateMachine:
             return self.frame_data[Action.JUMP][1]
         elif state == State.JUMP_RECOVERY:
             return self.frame_data[Action.JUMP][2]
-        return 0
+
+        return -1
     
     def can_transition(self, current_state: State, action) -> bool: # action is either an Action or a string event
         """Check if a transition is allowed"""
         return (current_state, action) in self.transitions
     
-    def get_next_state(self, current_state: State, event) -> State:
+    def get_next_state(self, player_state: PlayerState, current_state: State, event) -> State:
         """Get the next state based on current state and event"""
         if (current_state, event) in self.transitions:
-            return self.transitions[(current_state, event)]
+            next_state = self.transitions[(current_state, event)]
+            
+            # Handle smart returns from attack/block recovery
+            if next_state == 'smart_return':
+                if player_state and not player_state.is_grounded:
+                    # Return to appropriate aerial state based on velocity
+                    if player_state.velocity_y < 0:
+                        return State.JUMP_RISING
+                    else:
+                        return State.JUMP_FALLING
+                else:
+                    return State.IDLE
+            
+            # Handle zero-duration states by recursively transitioning
+            if isinstance(next_state, State):  # Only if it's an actual state (not 'smart_return')
+                duration = self.get_state_duration(next_state)
+                if duration == 0:  # Only skip zero-duration states, not unlimited (-1) ones
+                    # Immediately transition through zero-duration states
+                    return self.get_next_state(player_state, next_state, 'frame_complete')
+                    
+            return next_state
         return current_state
     
     def should_auto_transition(self, player_state: PlayerState) -> tuple[bool, str]:
@@ -122,16 +151,16 @@ class StateMachine:
             return True, 'frame_complete'
         
         # Check physics-based transitions
-        if player_state.current_state == State.JUMP_RISING and player_state.velocity_y >= 0:
-            return True, 'peak_reached'
+        if player_state.current_state == State.JUMP_RISING:
+            if player_state.velocity_y >= 0:
+                return True, 'peak_reached'
         elif player_state.current_state == State.JUMP_FALLING and player_state.is_grounded:
             return True, 'landed'
         
         if player_state.got_stunned and player_state.current_state != State.STUNNED:
             return True, 'stunned'
         elif player_state.current_state == State.STUNNED and player_state.stun_frames_remaining <= 0:
-            return True, 'stun_over'
-        
+            return True, 'stun_over' # Gets handled by smart return 
         return False, None
     
     def get_state_effects(self, new_state: State) -> dict:

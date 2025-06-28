@@ -12,7 +12,7 @@ class GameState:
                  player2_state: Optional[PlayerState] = None):
         self.arena_width = arena_width
         self.arena_height = arena_height
-        self.ground_level = arena_height - 50  # Floor height
+        self.ground_level = 0  # Floor height
         
         # Players
         self.players: Dict[int, PlayerState] = {

@@ -176,16 +176,25 @@ class Player(MLAgent):
         direction = 1 if self.state.facing_right else -1
         attack_x_offset = self.state.width / 2 * direction
         
+        # Calculate start and end points
+        attack_start_x = self.state.x + attack_x_offset
+        attack_end_x = attack_start_x + (self.state.x_attack_range * direction)
+        
+        # Ensure x1 < x2 by using min/max
+        x1 = min(attack_start_x, attack_end_x)
+        x2 = max(attack_start_x, attack_end_x)
+        
         return (
-            self.state.x + attack_x_offset,
-            self.state.y - self.state.y_attack_range/ 2,
-            self.state.x + attack_x_offset + self.state.x_attack_range * direction,
-            self.state.y + self.state.y_attack_range/ 2
+            x1,
+            self.state.y - self.state.y_attack_range / 2,
+            x2,
+            self.state.y + self.state.y_attack_range / 2
         )
 
     def can_take_action(self) -> bool:
         """Check if player can take a new action"""
-        return self.state.current_state == State.IDLE # Could add logic in here for cancellable actions in the future
+        actionable_states = self.state_machine.actionable_states
+        return self.state.current_state in actionable_states
 
     def is_action_off_cooldown(self, action: Action) -> bool:
         """Check if a specific action is off cooldown"""
@@ -297,14 +306,14 @@ class Player(MLAgent):
 
     def request_action(self, action: Action):
         if self.state_machine.can_transition(self.state.current_state, action):
-            new_state = self.state_machine.get_next_state(self.state.current_state, action)
+            new_state = self.state_machine.get_next_state(self.state, self.state.current_state, action)
             self._enter_state(new_state)
     
     def update_state(self):
         # Check for automatic transitions
         should_transition, event = self.state_machine.should_auto_transition(self.state)
         if should_transition:
-            new_state = self.state_machine.get_next_state(self.state.current_state, event)
+            new_state = self.state_machine.get_next_state(self.state, self.state.current_state, event)
             self._enter_state(new_state)
     
     def _enter_state(self, new_state: State):

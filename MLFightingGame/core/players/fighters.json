@@ -112,7 +112,7 @@
       "name": "Balanced",
       "description": "Well-rounded fighter with no major weaknesses",
       "base_stats": {
-        "gravity": 9.8,
+        "gravity": 1.0,
         "friction": 0.15,
         "width": 50,
         "height": 100,
@@ -131,29 +131,29 @@
       },
       "frame_data": {
         "ATTACK": {
-          "startup_frames": 3,
-          "active_frames": 2,
-          "recovery_frames": 7
+          "startup_frames": 5,
+          "active_frames": 15,
+          "recovery_frames": 20
         },
         "JUMP": {
-          "startup_frames": 2,
+          "startup_frames": 5,
           "active_frames": 1,
-          "recovery_frames": 3
+          "recovery_frames": 15
         },
         "BLOCK": {
-          "startup_frames": 2,
-          "active_frames": 10,
-          "recovery_frames": 3
+          "startup_frames": 10,
+          "active_frames": 25,
+          "recovery_frames": 10
         },
         "LEFT": {
           "startup_frames": 1,
-          "active_frames": 0,
-          "recovery_frames": 0
+          "active_frames": 10,
+          "recovery_frames": 1
         },
         "RIGHT": {
           "startup_frames": 1,
-          "active_frames": 0,
-          "recovery_frames": 0
+          "active_frames": 10,
+          "recovery_frames": 1
         },
         "IDLE": {
           "startup_frames": 0,

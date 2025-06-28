@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 import logging
 
 from . import GameState
@@ -7,16 +7,17 @@ from ..players import Player
 from ..rewards import RewardRegistry
 from ..globals.actions import Action
 from ..globals.states import State
+from ..replays import ReplayRecorder
 
 logger = logging.getLogger(__name__)
 
 class GameEngine:
 
     def __init__(self,
-                 state: GameState = None,
-                 player_1: Player = None,
-                 player_2: Player = None,
-                 is_recording: bool = False):
+                state: GameState = None,
+                player_1: Player = None,
+                player_2: Player = None,
+                is_recording: bool = False):
         """
         Initialize the game engine with necessary components.
         This includes setting up the game state and player objects.
@@ -28,6 +29,8 @@ class GameEngine:
         self.frame_counter: int = 0  # Track frames this fight
         self.fight_over: bool = False 
         self.winner: int = 0
+        self.replay_recorder: Optional[ReplayRecorder] = None
+
 
     def set_player(self, player_id: int, player: Player):
         """
@@ -54,6 +57,16 @@ class GameEngine:
             game_state: GameState object representing the current state of the game
         """
         self.state = game_state
+
+    def set_recording(self, is_recording: bool):
+        """
+        Enable or disable recording for the next fight.
+        
+        Args:
+            is_recording: Whether to record the next fight
+        """
+        self.is_recording = is_recording
+        logger.debug(f"Recording set to: {is_recording}")
 
 
     def step(self, game_state: GameState) -> GameState:
@@ -101,8 +114,13 @@ class GameEngine:
         # Reset fight status
         self.fight_over = False
         self.winner = 0
-        self.is_recording = False
         self.frame_counter = 0
+        
+        # Clear any existing replay recorder
+        self.replay_recorder = None
+        
+        # Reset recording status to False (must be explicitly enabled for each fight)
+        self.is_recording = False
         
         # Reset player positions to starting positions
         self.player_1.state.x = self.player_1.state.start_x
@@ -166,7 +184,7 @@ class GameEngine:
                     # Use state machine to check if transition is allowed
                     if player.state_machine.can_transition(player.state.current_state, action):
                         # Get the new state from state machine
-                        new_state = player.state_machine.get_next_state(player.state.current_state, action)
+                        new_state = player.state_machine.get_next_state(player.state, player.state.current_state, action)
                         
                         # Enter the new state
                         player._enter_state(new_state)
@@ -175,7 +193,7 @@ class GameEngine:
                 
                 # Clear requested action
                 delattr(player.state, 'requested_action')
-
+            
     def _update_physics(self):
         """Update physics for all players"""
         for player_state in [self.player_1.state, self.player_2.state]:
@@ -183,18 +201,13 @@ class GameEngine:
             player_state.velocity_y += player_state.gravity
             player_state.x += player_state.velocity_x
             player_state.y += player_state.velocity_y
-            
             # Boundary checking
             player_state.x = max(player_state.width/2, min(self.state.arena_width - player_state.width/2, player_state.x))
-            
             # Ground collision
-            if player_state.y >= self.state.ground_level:
+            if player_state.y > self.state.ground_level:
                 player_state.y = self.state.ground_level
                 player_state.velocity_y = 0
                 player_state.is_grounded = True
-                if player_state.current_state in [State.JUMP_ACTIVE, State.JUMP_RISING, State.JUMP_FALLING]:
-                    player_state.current_state = State.JUMP_RECOVERY
-                    player_state.state_frame_counter = 0  # Set to the first frame of the recovery state
             else:
                 player_state.is_grounded = False
             
@@ -212,15 +225,14 @@ class GameEngine:
         
         p1_hits_p2 = False
         p2_hits_p1 = False
-        
-        if p1_attack_hitbox:
-            p1_hits_p2 = self._hitboxes_overlap(p1_attack_hitbox, p2_hitbox)
-        
-        if p2_attack_hitbox:
-            p2_hits_p1 = self._hitboxes_overlap(p2_attack_hitbox, p1_hitbox)
-        
+                
         player1_state = self.player_1.state
         player2_state = self.player_2.state
+        
+        if p1_attack_hitbox:
+            p1_hits_p2 = self._hitboxes_overlap(p1_attack_hitbox, p2_hitbox) and player1_state.current_attack_landed == False
+        if p2_attack_hitbox:
+            p2_hits_p1 = self._hitboxes_overlap(p2_attack_hitbox, p1_hitbox) and player2_state.current_attack_landed == False
 
         if p1_hits_p2 and p2_hits_p1:
             # Both players hit - both get stunned
@@ -233,12 +245,16 @@ class GameEngine:
             player1_state.health -= player2_state.attack_damage * (1 - player1_state.damage_reduction)
             player2_state.health -= player1_state.attack_damage * (1 - player2_state.damage_reduction)
 
+            player1_state.current_attack_landed = True
+            player2_state.current_attack_landed = True
+
         elif p1_hits_p2:
             # Player 1 hits Player 2
             if player2_state.current_state == State.BLOCK_ACTIVE:
                 # Player 2 blocks the attack and stuns player 1 for block stun frames
                 player1_state.stun_frames_remaining = player2_state.on_block_stun
                 player1_state.got_stunned = True
+                player1_state.current_attack_landed = True
 
                 # Apply block damage reduction and base damage reduction
                 player2_state.health -= player1_state.attack_damage * (1 - player2_state.block_efficiency) * (1 - player2_state.damage_reduction)
@@ -246,6 +262,7 @@ class GameEngine:
                 # Player 2 does not block, so they take full damage and get stunned
                 player2_state.stun_frames_remaining = player1_state.on_hit_stun
                 player2_state.got_stunned = True
+                player1_state.current_attack_landed = True
 
                 # Player 2 takes damage equal to player 1's attack damage after their damage reduction is applied
                 player2_state.health -= player1_state.attack_damage * (1 - player2_state.damage_reduction)
@@ -254,11 +271,13 @@ class GameEngine:
             if player1_state.current_state == State.BLOCK_ACTIVE:
                 player2_state.stun_frames_remaining = player1_state.on_block_stun
                 player2_state.got_stunned = True
+                player2_state.current_attack_landed = True
 
                 player1_state.health -= player2_state.attack_damage * (1 - player1_state.block_efficiency) * (1 - player1_state.damage_reduction)
             else:
                 player1_state.stun_frames_remaining = player2_state.on_hit_stun
                 player1_state.got_stunned = True
+                player2_state.current_attack_landed = True
 
                 player1_state.health -= player2_state.attack_damage * (1 - player1_state.damage_reduction)
 
@@ -287,14 +306,19 @@ class GameEngine:
             if player.state.jump_cooldown_remaining > 0:
                 player.state.jump_cooldown_remaining -= 1
             
-            if player.state.stun_frames_remaining > 0:
+            if player.state.stun_frames_remaining > 0 and player.state.got_stunned == False:
                 player.state.stun_frames_remaining -= 1
 
             previous_state = player.state.current_state
             # Check for automatic transitions (frame completion, physics events, combat events)
             player.update_state()
+
+            # Reset the got stunned flag if the stun has been administered by the state machine
+            if player.state.got_stunned and player.state.current_state == State.STUNNED:
+                player.state.got_stunned = False
             if player.state.current_state == State.IDLE and previous_state != State.IDLE:
                 player.state.action_complete = True
+                player.state.current_attack_landed = False
             
             # Increment state frame counter
             player.state.state_frame_counter += 1
@@ -394,82 +418,30 @@ class GameEngine:
     def _validate_player_positions(self):
         """Ensure players are within valid game boundaries"""
         for player in [self.player_1.state, self.player_2.state]:
-            if player.y >= self.state.ground_level:
+            if player.y > self.state.ground_level:
                 player.y = self.state.ground_level
                 player.velocity_y = 0
             
             player.x = max(50, min(self.state.arena_width - 50, player.x))
 
+    def _initialize_recording(self):
+        """Initialize the replay recorder"""
+        self.replay_recorder = ReplayRecorder()
+        self.replay_recorder.start_recording(self.state)
+
     def _record_frame(self):
-        """Record current frame data for replay"""
-        if not hasattr(self, 'replay_data'):
-            self.replay_data = {
-                'metadata': {
-                    'arena_width': self.state.arena_width,
-                    'ground_level': self.state.ground_level,
-                    'max_frames': self.state.max_frames,
-                    'player_configs': {
-                        1: self.player_1.state.fighter_name,
-                        2: self.player_2.state.fighter_name
-                    }
-                },
-                'frames': []
-            }
+        """Record the current frame's state"""
+        # Initialize recorder on first frame if recording is enabled
+        if self.is_recording and self.replay_recorder is None:
+            self.replay_recorder = ReplayRecorder()
+            self.replay_recorder.start_recording(self.state)
         
-        # Record only essential frame data
-        frame_data = {
-            'f': self.frame_counter, 
-            'p1': self._compress_player_state(self.player_1.state),
-            'p2': self._compress_player_state(self.player_2.state)
-        }
-        
-        self.replay_data['frames'].append(frame_data)
-
-    def _compress_player_state(self, player_state: PlayerState) -> dict:
-        """Compress player state to minimal data needed for replay"""
-        return {
-            'x': round(player_state.x, 1),
-            'y': round(player_state.y, 1),
-            'h': round(player_state.health, 1), 
-            'a': player_state.current_action.value,  
-            'fr': player_state.facing_right,
-            'flags': self._pack_boolean_flags(player_state)  # Pack multiple booleans into single int
-        }
-
-    def _pack_boolean_flags(self, player_state: PlayerState) -> int:
-        """Pack state information into a single integer for compression"""
-        flags = 0
-        
-        # Pack attack_state (3 bits, positions 0-2)
-        flags |= (player_state.attack_state.value & 0x7)
-        
-        # Pack block_state (3 bits, positions 3-5)
-        flags |= ((player_state.block_state.value & 0x7) << 3)
-        
-        # Pack jump_state (3 bits, positions 6-8)
-        flags |= ((player_state.jump_state.value & 0x7) << 6)
-        
-        # Pack is_stunned (1 bit, position 9)
-        if player_state.is_stunned:
-            flags |= (1 << 9)
-        
-        return flags
+        # Record frame if recorder exists
+        if self.replay_recorder is not None:
+            self.replay_recorder.record_frame(self.state, self.frame_counter)
 
     def _save_replay(self):
-        """Save replay data to compressed file"""
-        import json
-        import gzip
-        from datetime import datetime
-        
-        # Add final metadata
-        self.replay_data['metadata']['total_frames'] = len(self.replay_data['frames'])
-        self.replay_data['metadata']['winner'] = getattr(self.state, 'winner', None)
-        self.replay_data['metadata']['timestamp'] = datetime.now().isoformat()
-        
-        # Save compressed replay
-        filename = f"replay_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json.gz"
-        
-        with gzip.open(filename, 'wt') as f:
-            json.dump(self.replay_data, f, separators=(',', ':')) 
-        
-        print(f"Replay saved: {filename}")
+        """Save the recorded replay to a file"""
+        if self.replay_recorder is not None:
+            self.replay_recorder.save_replay(self.winner)
+            self.replay_recorder = None  # Clear recorder after saving

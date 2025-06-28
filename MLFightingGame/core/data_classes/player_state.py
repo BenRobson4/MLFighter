@@ -54,6 +54,7 @@ class PlayerState:
 
     attack_cooldown: int = 20 # Minimum frames between attacks
     attack_cooldown_remaining: int = 0 # Frames before player can attack again
+    current_attack_landed: bool = False # Whether the current attack has landed on the opponent
 
     block_cooldown: int = 15 # Minimum frames between blocks
     block_cooldown_remaining: int = 0 # Frames before player can block again
