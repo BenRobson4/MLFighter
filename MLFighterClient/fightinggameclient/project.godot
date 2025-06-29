@@ -18,4 +18,3 @@ config/icon="res://icon.svg"
 [rendering]
 
 renderer/rendering_method="mobile"
-environment/defaults/default_clear_color=Color(1, 1, 1, 1)

@@ -1,7 +1,54 @@
 [gd_scene load_steps=9 format=3 uid="uid://cajfoy46pp0w6"]
 
-[ext_resource type="Script" uid="uid://w3ijqxw4m24a" path="res://scenes/character_body_2d.gd" id="1_8uh7m"]
 [ext_resource type="Texture2D" uid="uid://ctx3alk68w63c" path="res://assets/full_sprite_sheet.png" id="2_6uqi0"]
+
+[sub_resource type="GDScript" id="GDScript_37kl0"]
+script/source = "extends CharacterBody2D
+
+# Movement variables
+var speed := 200
+var jump_velocity := -400
+var gravity := 1000
+
+# Called when the node is added to the scene
+func _ready():
+	$AnimationPlayer.play(\"idle\")  # Play idle at start
+
+func _physics_process(delta):
+	var input_vector = Vector2.ZERO
+
+	# Get input direction
+	input_vector.x = Input.get_action_strength(\"ui_right\") - Input.get_action_strength(\"ui_left\")
+	input_vector = input_vector.normalized()
+
+	# Move left/right
+	velocity.x = input_vector.x * speed
+
+	# Apply gravity
+	if not is_on_floor():
+		velocity.y += gravity * delta
+	else:
+		if Input.is_action_just_pressed(\"ui_accept\"):
+			velocity.y = jump_velocity
+
+	move_and_slide()
+
+	# Animation logic
+	update_animation(input_vector)
+
+func update_animation(input_vector: Vector2):
+	var anim = $AnimationPlayer
+	
+	if not is_on_floor():
+		anim.play(\"jump\")
+	elif input_vector.x != 0:
+		anim.play(\"run\")
+	else:
+		anim.play(\"idle\")
+			# Flip sprite based on direction
+	if input_vector.x != 0:
+		$Sprite2D.flip_h = input_vector.x < 0
+"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ppyta"]
 size = Vector2(20, 33)
@@ -83,7 +130,7 @@ _data = {
 [node name="Node2D" type="Node2D"]
 
 [node name="Player" type="CharacterBody2D" parent="."]
-script = ExtResource("1_8uh7m")
+script = SubResource("GDScript_37kl0")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
 position = Vector2(-1, 0.5)

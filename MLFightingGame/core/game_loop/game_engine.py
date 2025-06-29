@@ -201,11 +201,15 @@ class GameEngine:
             player_state.velocity_y += player_state.gravity
             player_state.x += player_state.velocity_x
             player_state.y += player_state.velocity_y
-            # Boundary checking
-            player_state.x = max(player_state.width/2, min(self.state.arena_width - player_state.width/2, player_state.x))
-            # Ground collision
-            if player_state.y > self.state.ground_level:
-                player_state.y = self.state.ground_level
+            
+            # Boundary checking - account for player width (position is at center)
+            half_width = player_state.width / 2
+            player_state.x = max(half_width, min(self.state.arena_width - half_width, player_state.x))
+            
+            # Ground collision - account for player height (position is at center)
+            half_height = player_state.height / 2
+            if player_state.y + half_height > self.state.ground_level:
+                player_state.y = self.state.ground_level - half_height
                 player_state.velocity_y = 0
                 player_state.is_grounded = True
             else:
@@ -213,7 +217,7 @@ class GameEngine:
             
             # Apply friction/deceleration for horizontal movement
             if not player_state.current_state == State.ATTACK_ACTIVE and player_state.current_state not in [State.LEFT_ACTIVE, State.RIGHT_ACTIVE]:
-                player_state.velocity_x *= player_state.friction 
+                player_state.velocity_x *= player_state.friction
     
     def _handle_combat(self):
         """Handle combat interactions between players"""
@@ -418,12 +422,16 @@ class GameEngine:
     def _validate_player_positions(self):
         """Ensure players are within valid game boundaries"""
         for player in [self.player_1.state, self.player_2.state]:
-            if player.y > self.state.ground_level:
-                player.y = self.state.ground_level
+            # Ground collision - account for player height
+            half_height = player.height / 2
+            if player.y + half_height > self.state.ground_level:
+                player.y = self.state.ground_level - half_height
                 player.velocity_y = 0
             
-            player.x = max(50, min(self.state.arena_width - 50, player.x))
-
+            # Horizontal boundaries - account for player width
+            half_width = player.width / 2
+            player.x = max(half_width, min(self.state.arena_width - half_width, player.x))
+            
     def _initialize_recording(self):
         """Initialize the replay recorder"""
         self.replay_recorder = ReplayRecorder()

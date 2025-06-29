@@ -6,8 +6,8 @@
       "base_stats": {
         "gravity": 1.0,
         "friction": 0.15,
-        "width": 50,
-        "height": 100,
+        "width": 25,
+        "height": 33,
         "jump_force": 20,
         "jump_cooldown": 25,
         "move_speed": 6,
@@ -114,8 +114,8 @@
       "base_stats": {
         "gravity": 1.0,
         "friction": 0.15,
-        "width": 50,
-        "height": 100,
+        "width": 25,
+        "height": 33,
         "jump_force": 11,
         "jump_cooldown": 30,
         "move_speed": 5,

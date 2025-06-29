@@ -1,13 +1,13 @@
 from typing import Dict, Any, Tuple, Optional
 import numpy as np
 from ..data_classes import PlayerState
-from ..globals.constants import MAX_X_VELOCITY, MAX_Y_VELOCITY, MAX_FRAMES
+from ..globals.constants import MAX_X_VELOCITY, MAX_Y_VELOCITY, MAX_FRAMES, ARENA_HEIGHT, ARENA_WIDTH
 from ..globals import State
 
 class GameState:
     """Represents the complete state of the game"""
     
-    def __init__(self, arena_width: int = 800, arena_height: int = 400, 
+    def __init__(self, arena_width: int = ARENA_WIDTH, arena_height: int = ARENA_HEIGHT, 
                  player1_state: Optional[PlayerState] = None, 
                  player2_state: Optional[PlayerState] = None):
         self.arena_width = arena_width

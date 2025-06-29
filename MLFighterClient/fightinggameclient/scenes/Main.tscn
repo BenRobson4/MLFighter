@@ -1,11 +1,54 @@
-[gd_scene load_steps=2 format=3 uid="uid://cgsgf0fciw5tn"]
+[gd_scene load_steps=5 format=3 uid="uid://cgsgf0fciw5tn"]
 
+[ext_resource type="Script" uid="uid://dmekopwcdwol4" path="res://scripts/Main.gd" id="1_0bbpv"]
 [ext_resource type="PackedScene" uid="uid://sa2p8h1xwn06" path="res://scenes/GameWorld.tscn" id="1_rvslj"]
+[ext_resource type="PackedScene" uid="uid://dsgb272wk5fqp" path="res://scenes/TopBar.tscn" id="3_rarhs"]
+[ext_resource type="PackedScene" uid="uid://f8og2m06nje" path="res://scenes/BottomBar.tscn" id="4_vcsgt"]
 
-[node name="Main" type="Node"]
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_0bbpv")
 
-[node name="GameWorld" parent="." instance=ExtResource("1_rvslj")]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="NetworkClient" type="Node" parent="."]
+[node name="TopBar" parent="VBoxContainer" instance=ExtResource("3_rarhs")]
+custom_minimum_size = Vector2(0, 75)
+layout_mode = 2
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="ArenaSection" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ArenaBackground" type="ColorRect" parent="VBoxContainer/ArenaSection"]
+layout_mode = 2
+
+[node name="GameViewportContainer" type="SubViewportContainer" parent="VBoxContainer/ArenaSection/ArenaBackground"]
+layout_mode = 2
+offset_top = -8.0
+offset_right = 40.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="GameViewport" type="SubViewport" parent="VBoxContainer/ArenaSection/ArenaBackground/GameViewportContainer"]
+handle_input_locally = false
+size = Vector2i(40, 2)
+render_target_update_mode = 4
+
+[node name="GameWorld" parent="VBoxContainer/ArenaSection/ArenaBackground/GameViewportContainer/GameViewport" instance=ExtResource("1_rvslj")]
+
+[node name="BottomBar" parent="VBoxContainer" instance=ExtResource("4_vcsgt")]
+custom_minimum_size = Vector2(0, 75)
+layout_mode = 2

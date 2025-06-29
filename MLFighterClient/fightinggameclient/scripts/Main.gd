@@ -1,100 +1,111 @@
-extends Node2D
+extends Control
 
-@onready var player1 = $Player1
-@onready var player2 = $Player2
-@onready var replay_manager = $ReplayManager
-@onready var network_manager = $NetworkManager
-@onready var ui = $UI
+@onready var vbox_container = $VBoxContainer
+@onready var top_bar = $VBoxContainer/TopBar
+@onready var arena_section = $VBoxContainer/ArenaSection
+@onready var arena_background = $VBoxContainer/ArenaSection/ArenaBackground
+@onready var game_viewport_container = $VBoxContainer/ArenaSection/ArenaBackground/GameViewportContainer
+@onready var game_viewport = $VBoxContainer/ArenaSection/ArenaBackground/GameViewportContainer/GameViewport
+@onready var bottom_bar = $VBoxContainer/BottomBar
 
-var current_frame_data: Dictionary = {}
+# UI settings
+@export var top_bar_height: int = 100
+@export var bottom_bar_height: int = 120
+@export var border_width: int = 10
+@export var border_color: Color = Color(0.4, 0.4, 0.4, 1.0)
+@export var background_color: Color = Color(0.1, 0.1, 0.1, 0.9)
+
+# Arena dimensions (from replay data)
+var arena_width: float = 800
+var arena_height: float = 400
 
 func _ready():
-	# Connect signals
-	replay_manager.frame_changed.connect(_on_frame_changed)
-	replay_manager.replay_loaded.connect(_on_replay_loaded)
-	replay_manager.replay_finished.connect(_on_replay_finished)
+	# Set up initial layout
+	_setup_initial_layout()
 	
-	network_manager.replay_received.connect(_on_replay_received)
-	network_manager.connected_to_server.connect(_on_connected)
+	# Connect to viewport size changes
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	
-	# Initialize UI
-	if ui:
-		ui.play_button.pressed.connect(_on_play_pressed)
-		ui.pause_button.pressed.connect(_on_pause_pressed)
-		ui.slider.value_changed.connect(_on_seek)
+	# Connect UI to GameWorld
+	await get_tree().process_frame
+	var game_world = game_viewport.get_node_or_null("GameWorld")
+	if game_world:
+		if game_world.has_method("connect_ui"):
+			game_world.connect_ui(top_bar, bottom_bar)
+		if game_world.has_method("connect_main_scene"):
+			game_world.connect_main_scene(self)
+
+func _setup_initial_layout():
+	# Set up VBoxContainer to fill the screen
+	vbox_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	
-	# Connect to server (adjust host/port as needed)
-	network_manager.connect_to_server("localhost", 8080)
-
-func _on_connected():
-	print("Connected to server!")
-	# Request a replay
-	network_manager.request_replay()
-
-func _on_replay_received(replay_json: String):
-	print("Received replay from server")
-	if replay_manager.load_replay_from_json(replay_json):
-		# Start playing automatically
-		replay_manager.play()
-
-func _on_replay_loaded(replay_data: Dictionary):
-	print("Replay loaded successfully")
-	# Update UI with replay info
-	if ui:
-		ui.set_max_frames(replay_manager.frames.size())
-
-func _on_frame_changed(frame_number: int):
-	"""Handle frame change during replay"""
-	current_frame_data = replay_manager.get_current_frame()
+	# Set fixed heights for top and bottom bars
+	if top_bar:
+		top_bar.custom_minimum_size.y = top_bar_height
+		top_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	
-	if current_frame_data.size() == 0:
+	if bottom_bar:
+		bottom_bar.custom_minimum_size.y = bottom_bar_height
+		bottom_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	# Set up arena section to expand and fill
+	if arena_section:
+		arena_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		arena_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		
+		# Set margins for the border effect
+		arena_section.add_theme_constant_override("margin_left", border_width)
+		arena_section.add_theme_constant_override("margin_right", border_width)
+		arena_section.add_theme_constant_override("margin_top", 0)
+		arena_section.add_theme_constant_override("margin_bottom", 0)
+	
+	# Set up arena background color
+	if arena_background:
+		if arena_background is Panel:
+			var style = StyleBoxFlat.new()
+			style.bg_color = border_color
+			arena_background.add_theme_stylebox_override("panel", style)
+		elif arena_background is ColorRect:
+			arena_background.color = border_color
+	
+	# Set up viewport container
+	if game_viewport_container:
+		game_viewport_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		game_viewport_container.stretch = true
+		game_viewport_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		game_viewport_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
+	# Initial viewport setup
+	_update_viewport_size()
+
+func set_arena_dimensions(width: float, height: float):
+	"""Called by GameWorld when replay is loaded"""
+	arena_width = width
+	arena_height = height
+	print("Arena dimensions set: ", width, "x", height)
+	_update_viewport_size()
+	
+	# Update camera in GameWorld
+	if game_viewport:
+		var game_world = game_viewport.get_node_or_null("GameWorld")
+		if game_world and game_world.has_node("Camera2D"):
+			var camera = game_world.get_node("Camera2D")
+			if camera.has_method("setup_camera_for_arena"):
+				camera.setup_camera_for_arena(width, height)
+
+func _on_viewport_size_changed():
+	_update_viewport_size()
+
+func _update_viewport_size():
+	# Wait for layout to update
+	await get_tree().process_frame
+	
+	if not game_viewport_container or not game_viewport:
 		return
 	
-	# Update player states
-	if current_frame_data.has("players"):
-		var players_data = current_frame_data["players"]
-		
-		if players_data.has("player1") and player1:
-			player1.update_state(players_data["player1"])
-		
-		if players_data.has("player2") and player2:
-			player2.update_state(players_data["player2"])
+	# Get the actual size of the viewport container
+	var container_size = game_viewport_container.size
 	
-	# Trigger action animations
-	if current_frame_data.has("actions"):
-		var actions = current_frame_data["actions"]
-		
-		if actions.has("player1") and player1:
-			player1.perform_action(actions["player1"])
-		
-		if actions.has("player2") and player2:
-			player2.perform_action(actions["player2"])
+	# Update SubViewport to match container
+	game_viewport.size = container_size
 	
-	# Update UI
-	if ui:
-		ui.update_frame_counter(frame_number)
-		ui.slider.set_value_no_signal(frame_number)
-	
-	# Check for game over
-	if current_frame_data.get("game_over", false):
-		var winner = current_frame_data.get("winner", "")
-		_show_game_over(winner)
-
-func _on_replay_finished():
-	print("Replay finished")
-	if ui:
-		ui.show_replay_finished()
-
-func _show_game_over(winner: String):
-	"""Display game over screen"""
-	if ui:
-		ui.show_winner(winner)
-
-func _on_play_pressed():
-	replay_manager.play()
-
-func _on_pause_pressed():
-	replay_manager.pause()
-
-func _on_seek(value: float):
-	replay_manager.seek(int(value))

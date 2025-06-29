@@ -74,9 +74,13 @@ class ReplayViewer:
         x = float(player_data['x'])
         y = float(player_data['y'])
         
-        # Convert Y coordinate (game uses negative Y for up, Pygame uses positive Y for down)
-        screen_y = self.screen_height - self.ground_level - y - self.player_height
+        # When y=0, the feet should be at ground level
+        ground_y = self.screen_height - self.ground_level
+        feet_y = ground_y + y  # Add because negative y is up in game
+        
+        # Calculate top-left corner of rectangle for pygame
         screen_x = x - self.player_width // 2
+        screen_y = feet_y - self.player_height  # Top of rectangle is height above feet
         
         # Get color based on state
         color = self.get_state_color(player_data['current_state'])
@@ -130,7 +134,7 @@ class ReplayViewer:
         player_text = self.small_font.render(f"P{player_id}", True, self.WHITE)
         text_rect = player_text.get_rect(center=(screen_x + self.player_width // 2, screen_y + self.player_height // 2))
         self.screen.blit(player_text, text_rect)
-    
+            
     def draw_ground(self):
         """Draw the ground line"""
         ground_y = self.screen_height - self.ground_level

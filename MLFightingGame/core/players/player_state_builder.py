@@ -3,6 +3,7 @@ from typing import Dict, List
 
 from ..data_classes import PlayerState, ActionFrameData
 from ..globals import Action, State
+from ..globals.constants import ARENA_WIDTH, ARENA_HEIGHT, SPAWN_MARGIN, GROUND_LEVEL
 from .fighter_loader import FighterLoader
 
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ class PlayerStateBuilder:
     """Builder for creating PlayerState objects with proper initialization"""
     
     @staticmethod
-    def build(player, player_id: int, spawn_x: float = 0.0, spawn_y: float = 0.0) -> PlayerState:
+    def build(player, player_id: int, spawn_x: float = None, spawn_y: float = None) -> PlayerState:
         """
         Generate a PlayerState object for this player at the start of combat
         
@@ -38,6 +39,15 @@ class PlayerStateBuilder:
         
         # Determine facing direction based on player_id
         facing_right = (player_id == 1)
+
+        if spawn_x == None:
+            if player_id == 1:
+                spawn_x = SPAWN_MARGIN
+            else:
+                spawn_x = ARENA_WIDTH - SPAWN_MARGIN
+        
+        if spawn_y == None:
+            spawn_y = GROUND_LEVEL
         
         # Create the PlayerState
         player_state = PlayerState(

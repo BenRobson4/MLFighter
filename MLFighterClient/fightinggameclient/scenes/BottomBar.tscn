@@ -1,0 +1,82 @@
+[gd_scene load_steps=2 format=3 uid="uid://f8og2m06nje"]
+
+[ext_resource type="Script" uid="uid://bb3tulyw7kemq" path="res://scripts/BottomBar.gd" id="1_fnh6w"]
+
+[node name="BottomBar" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fnh6w")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ControlContainer" type="MarginContainer" parent="Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Background/ControlContainer"]
+layout_mode = 2
+
+[node name="InfoRow" type="HBoxContainer" parent="Background/ControlContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="WinnerLabel" type="Label" parent="Background/ControlContainer/VBoxContainer/InfoRow"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Background/ControlContainer/VBoxContainer/InfoRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FrameLabel" type="Label" parent="Background/ControlContainer/VBoxContainer/InfoRow"]
+layout_mode = 2
+
+[node name="ControlsRow" type="HBoxContainer" parent="Background/ControlContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="LoadButton" type="Button" parent="Background/ControlContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+text = "Load"
+
+[node name="PlayButton" type="Button" parent="Background/ControlContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+text = "Play"
+
+[node name="PauseButton" type="Button" parent="Background/ControlContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+text = "Pause"
+
+[node name="StopButton" type="Button" parent="Background/ControlContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+text = "Stop"
+
+[node name="SpeedLabel" type="Label" parent="Background/ControlContainer/VBoxContainer/ControlsRow"]
+modulate = Color(0, 0, 0, 0.756863)
+layout_mode = 2
+text = "Speed:"
+
+[node name="SpeedSlider" type="HSlider" parent="Background/ControlContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="FrameSlider" type="HSlider" parent="Background/ControlContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4

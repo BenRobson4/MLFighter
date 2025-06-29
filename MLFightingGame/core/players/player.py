@@ -277,9 +277,8 @@ class Player(MLAgent):
             Selected action index
         """
 
-        return Action.JUMP
+        ## return Action.JUMP  # Test that the game works without the ML logic
 
-        """
         # Get action from ML agent
         action = super().get_action(
             state_vector, 
@@ -302,7 +301,6 @@ class Player(MLAgent):
         self.actions_taken += 1
         
         return action
-        """
 
     def request_action(self, action: Action):
         if self.state_machine.can_transition(self.state.current_state, action):

@@ -1,0 +1,67 @@
+[gd_scene load_steps=2 format=3 uid="uid://dsgb272wk5fqp"]
+
+[ext_resource type="Script" uid="uid://bso7vux0xoynn" path="res://scripts/TopBar.gd" id="1_0j6fj"]
+
+[node name="TopBar" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_0j6fj")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HealthContainer" type="MarginContainer" parent="Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HealthBars" type="HBoxContainer" parent="Background/HealthContainer"]
+layout_mode = 2
+
+[node name="Player1Health" type="VBoxContainer" parent="Background/HealthContainer/HealthBars"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Player1NameLabel" type="Label" parent="Background/HealthContainer/HealthBars/Player1Health"]
+layout_mode = 2
+text = "Player 1"
+
+[node name="Player1HealthBar" type="ProgressBar" parent="Background/HealthContainer/HealthBars/Player1Health"]
+layout_mode = 2
+
+[node name="Player1HealthLabel" type="Label" parent="Background/HealthContainer/HealthBars/Player1Health"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Background/HealthContainer/HealthBars"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+
+[node name="Player2Health" type="VBoxContainer" parent="Background/HealthContainer/HealthBars"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Player2NameLabel" type="Label" parent="Background/HealthContainer/HealthBars/Player2Health"]
+layout_mode = 2
+text = "Player 1"
+
+[node name="Player2HealthBar" type="ProgressBar" parent="Background/HealthContainer/HealthBars/Player2Health"]
+layout_mode = 2
+
+[node name="Player2HealthLabel" type="Label" parent="Background/HealthContainer/HealthBars/Player2Health"]
+layout_mode = 2

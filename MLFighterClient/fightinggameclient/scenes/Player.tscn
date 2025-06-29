@@ -1,24 +1,7 @@
-[gd_scene load_steps=20 format=3 uid="uid://dxc8sjiye2j58"]
+[gd_scene load_steps=21 format=3 uid="uid://dxc8sjiye2j58"]
 
 [ext_resource type="Script" uid="uid://cfo2g5usjytet" path="res://scripts/Player.gd" id="1_p0vlq"]
 [ext_resource type="Texture2D" uid="uid://ctx3alk68w63c" path="res://assets/full_sprite_sheet.png" id="2_v6fml"]
-
-[sub_resource type="Animation" id="Animation_v6fml"]
-resource_name = "run"
-length = 0.4
-loop_mode = 1
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D:frame")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
-"update": 1,
-"values": [1, 2, 3, 0]
-}
 
 [sub_resource type="Animation" id="Animation_3li8b"]
 length = 0.001
@@ -73,9 +56,6 @@ resource_name = "attack_startup"
 [sub_resource type="Animation" id="Animation_d3wef"]
 resource_name = "attack_active"
 
-[sub_resource type="Animation" id="Animation_o4126"]
-resource_name = "attack_wait"
-
 [sub_resource type="Animation" id="Animation_lkdrv"]
 resource_name = "attack_recovery"
 
@@ -128,21 +108,6 @@ tracks/0/keys = {
 "values": [8, 9]
 }
 
-[sub_resource type="Animation" id="Animation_p7iby"]
-resource_name = "jump_wait"
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D:frame")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [9]
-}
-
 [sub_resource type="Animation" id="Animation_cw2d6"]
 resource_name = "block_startup"
 tracks/0/type = "value"
@@ -161,11 +126,61 @@ tracks/0/keys = {
 [sub_resource type="Animation" id="Animation_0rnld"]
 resource_name = "block_active"
 
-[sub_resource type="Animation" id="Animation_srp4u"]
-resource_name = "block_wait"
-
 [sub_resource type="Animation" id="Animation_jfpux"]
 resource_name = "block_recovery"
+
+[sub_resource type="Animation" id="Animation_p7iby"]
+resource_name = "jump_rising"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [9]
+}
+
+[sub_resource type="Animation" id="Animation_o4126"]
+resource_name = "jump_falling"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [9]
+}
+
+[sub_resource type="Animation" id="Animation_v6fml"]
+resource_name = "run_active"
+length = 0.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [1, 2, 3, 0]
+}
+
+[sub_resource type="Animation" id="Animation_srp4u"]
+resource_name = "run_startup"
+
+[sub_resource type="Animation" id="Animation_61ith"]
+resource_name = "run_recovery"
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_bruh7"]
 _data = {
@@ -173,17 +188,18 @@ _data = {
 &"attack_active": SubResource("Animation_d3wef"),
 &"attack_recovery": SubResource("Animation_lkdrv"),
 &"attack_startup": SubResource("Animation_70d11"),
-&"attack_wait": SubResource("Animation_o4126"),
 &"block_active": SubResource("Animation_0rnld"),
 &"block_recovery": SubResource("Animation_jfpux"),
 &"block_startup": SubResource("Animation_cw2d6"),
-&"block_wait": SubResource("Animation_srp4u"),
 &"idle": SubResource("Animation_mdl7e"),
 &"jump_active": SubResource("Animation_bruh7"),
+&"jump_falling": SubResource("Animation_o4126"),
 &"jump_recovery": SubResource("Animation_6eyey"),
+&"jump_rising": SubResource("Animation_p7iby"),
 &"jump_startup": SubResource("Animation_qu4a1"),
-&"jump_wait": SubResource("Animation_p7iby"),
-&"run": SubResource("Animation_v6fml"),
+&"run_active": SubResource("Animation_v6fml"),
+&"run_recovery": SubResource("Animation_61ith"),
+&"run_startup": SubResource("Animation_srp4u"),
 &"stunned": SubResource("Animation_khinc")
 }
 
@@ -196,11 +212,6 @@ position = Vector2(-1, 0)
 texture = ExtResource("2_v6fml")
 hframes = 4
 vframes = 4
-
-[node name="HealthBar" type="ProgressBar" parent="."]
-visible = false
-offset_right = 4.0
-offset_bottom = 27.0
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {

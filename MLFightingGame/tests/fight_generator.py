@@ -1,258 +1,141 @@
-"""
-Fight Generator - Runs a single fight between two AI players and saves the replay
-"""
-
-import sys
 import os
+import sys
+import time
+import subprocess
 from pathlib import Path
-from typing import Optional
 
-# Add parent directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
+# Add the project root to the path so we can import modules
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
 
-from ..core.data_classes import PlayerState, Fighter
-from ..core.globals import Action, State
-from ..core.players.player_state_builder import PlayerStateBuilder
-from ..core.players.player import Player
-from ..core.game_loop import GameState, GameEngine
+from core.data_classes import PlayerState
+from core.globals import Action, State
+from core.players.player_state_builder import PlayerStateBuilder
+from core.players.player import Player
+from core.game_loop import GameState, GameEngine
 
 
-class FightGenerator:
-    """Generates and runs a single fight between two players"""
+def create_player(player_id: int, fighter_name: str):
+    """Create a player object with fighter data"""
+    return Player(
+        player_id=player_id, 
+        fighter_name=fighter_name
+    )
+
+
+def setup_game():
+    """Set up the game with two players"""
+    # Create player objects with fighter data
+    player1 = create_player(1, "balanced")
+    player2 = create_player(2, "aggressive")
     
-    def __init__(self, 
-                 player1_fighter: str = "balanced",
-                 player2_fighter: str = "aggressive",
-                 arena_width: int = 800,
-                 arena_height: int = 400,
-                 record_replay: bool = True,
-                 max_frames: int = 1800):  # 30 seconds at 60 FPS
-        """
-        Initialize the fight generator
-        
-        Args:
-            player1_fighter: Fighter type for player 1
-            player2_fighter: Fighter type for player 2
-            arena_width: Width of the arena
-            arena_height: Height of the arena
-            record_replay: Whether to record the fight for replay
-            max_frames: Maximum frames before timeout
-        """
-        self.player1_fighter = player1_fighter
-        self.player2_fighter = player2_fighter
-        self.arena_width = arena_width
-        self.arena_height = arena_height
-        self.record_replay = record_replay
-        self.max_frames = max_frames
-        
-        self.setup_fight()
+    # Build player states
+    player1_state = PlayerStateBuilder.build(
+        player1, 
+        player_id=1, 
+        spawn_x=None,  # Default spawn positions will be used
+        spawn_y=None
+    )
+    player2_state = PlayerStateBuilder.build(
+        player2, 
+        player_id=2, 
+        spawn_x=None,
+        spawn_y=None
+    )
     
-    def setup_fight(self):
-        """Set up the fight with players and game engine"""
-        # Create players
-        print(f"Creating Player 1: {self.player1_fighter}")
-        self.player1 = Player(
-            player_id=1, 
-            fighter_name=self.player1_fighter
-        )
-        
-        print(f"Creating Player 2: {self.player2_fighter}")
-        self.player2 = Player(
-            player_id=2, 
-            fighter_name=self.player2_fighter
-        )
-        
-        # Build player states with spawn positions
-        spawn_margin = 250  # Distance from center
-        center_x = self.arena_width / 2
-        
-        self.player1_state = PlayerStateBuilder.build(
-            self.player1, 
-            player_id=1, 
-            spawn_x=center_x - spawn_margin, 
-            spawn_y=0.0
-        )
-        
-        self.player2_state = PlayerStateBuilder.build(
-            self.player2, 
-            player_id=2, 
-            spawn_x=center_x + spawn_margin, 
-            spawn_y=0.0
-        )
-        
-        # Create game state
-        self.game_state = GameState(
-            arena_width=self.arena_width, 
-            arena_height=self.arena_height, 
-            player1_state=self.player1_state, 
-            player2_state=self.player2_state
-        )
-        
-        # Create game engine
-        self.engine = GameEngine(
-            state=self.game_state,
-            player_1=self.player1,
-            player_2=self.player2,
-            is_recording=False  # Will be set before running
-        )
+    # Create game state
+    state = GameState( 
+        player1_state=player1_state, 
+        player2_state=player2_state
+    )
+
+    # Create game engine with recording enabled
+    engine = GameEngine(
+        state=state,
+        player_1=player1,
+        player_2=player2,
+        is_recording=True
+    )
     
-    def run_fight(self) -> dict:
-        """
-        Run the fight until completion
-        
-        Returns:
-            Dictionary with fight results
-        """
-        print(f"\n{'='*50}")
-        print(f"Starting fight: {self.player1_fighter} vs {self.player2_fighter}")
-        print(f"Arena: {self.arena_width}x{self.arena_height}")
-        print(f"Recording: {'Enabled' if self.record_replay else 'Disabled'}")
-        print(f"{'='*50}\n")
-        
-        # Enable recording if requested
-        if self.record_replay:
-            self.engine.set_recording(True)
-        
-        # Run the fight
-        frame_count = 0
-        
-        while not self.engine.fight_over and frame_count < self.max_frames:
-            # Step the game engine
-            self.engine.step(self.game_state)
-            frame_count += 1
-            
-            # Print progress every 60 frames (1 second at 60 FPS)
-            if frame_count % 60 == 0:
-                p1_health = self.player1_state.health
-                p2_health = self.player2_state.health
-                print(f"Frame {frame_count}: P1 Health: {p1_health:.1f}, P2 Health: {p2_health:.1f}")
-        
-        # Fight ended
-        print(f"\n{'='*50}")
-        print(f"Fight ended after {frame_count} frames ({frame_count/60:.1f} seconds)")
-        
-        # Determine results
-        results = {
-            'total_frames': frame_count,
-            'duration_seconds': frame_count / 60,
-            'winner': self.engine.winner,
-            'player1_health': self.player1_state.health,
-            'player2_health': self.player2_state.health,
-            'player1_fighter': self.player1_fighter,
-            'player2_fighter': self.player2_fighter,
-            'timeout': frame_count >= self.max_frames
-        }
-        
-        # Print results
-        if results['timeout']:
-            print("Fight ended due to timeout!")
-        
-        if results['winner'] == 1:
-            print(f"Winner: Player 1 ({self.player1_fighter})")
-        elif results['winner'] == 2:
-            print(f"Winner: Player 2 ({self.player2_fighter})")
-        else:
-            print("Draw!")
-        
-        print(f"Final Health - P1: {results['player1_health']:.1f}, P2: {results['player2_health']:.1f}")
-        
-        if self.record_replay:
-            print("\nReplay saved to 'replays' directory")
-        
-        print(f"{'='*50}\n")
-        
-        return results
+    return engine, state
+
+
+def run_fight(engine, state):
+    """Run a fight until completion"""
+    print("Starting fight...")
+    start_time = time.time()
+    frame_count = 0
     
-    def reset_and_run_another(self) -> dict:
-        """Reset the engine and run another fight"""
-        print("Resetting for another fight...")
-        self.engine.reset()
+    # Run until fight is over
+    while not engine.fight_over:
+        engine.step(state)
+        frame_count += 1
         
-        # Re-enable recording if needed
-        if self.record_replay:
-            self.engine.set_recording(True)
-        
-        return self.run_fight()
+        # Print progress every 100 frames
+        if frame_count % 100 == 0:
+            elapsed = time.time() - start_time
+            fps = frame_count / elapsed if elapsed > 0 else 0
+            print(f"Frame {frame_count}, {fps:.1f} FPS, Player 1 Health: {state.get_player(1).health:.1f}, Player 2 Health: {state.get_player(2).health:.1f}")
+    
+    # Fight is over
+    elapsed = time.time() - start_time
+    fps = frame_count / elapsed if elapsed > 0 else 0
+    
+    print("\nFight completed!")
+    print(f"Total frames: {frame_count}")
+    print(f"Elapsed time: {elapsed:.2f} seconds")
+    print(f"Average FPS: {fps:.1f}")
+    print(f"Winner: Player {engine.winner}")
+    print(f"Final health - P1: {state.get_player(1).health:.1f}, P2: {state.get_player(2).health:.1f}")
+    
+    # Return the last saved replay file
+    replay_dir = Path("replays")
+    if replay_dir.exists():
+        replay_files = list(replay_dir.glob("*.json"))
+        if replay_files:
+            latest_replay = max(replay_files, key=lambda p: p.stat().st_mtime)
+            return str(latest_replay)
+    
+    return None
+
+
+def view_replay(replay_file):
+    """Launch the replay viewer for the generated replay"""
+    if not replay_file or not Path(replay_file).exists():
+        print("No replay file found.")
+        return
+    
+    viewer_path = Path(__file__).parent / "replay_viewer.py"
+    if not viewer_path.exists():
+        print("Replay viewer not found. Please ensure replay_viewer.py is in the same directory.")
+        return
+    
+    print(f"\nLaunching replay viewer for: {replay_file}")
+    
+    try:
+        subprocess.run([sys.executable, str(viewer_path), replay_file])
+    except Exception as e:
+        print(f"Error launching replay viewer: {e}")
 
 
 def main():
     """Main entry point"""
-    import argparse
+    print("ML Fighting Game - Fight Generator")
+    print("=================================\n")
     
-    parser = argparse.ArgumentParser(description='Generate a fight between two AI players')
-    parser.add_argument('--p1', '--player1', 
-                       default='balanced',
-                       help='Fighter type for Player 1 (default: balanced)')
-    parser.add_argument('--p2', '--player2',
-                       default='aggressive', 
-                       help='Fighter type for Player 2 (default: aggressive)')
-    parser.add_argument('--width',
-                       type=int,
-                       default=800,
-                       help='Arena width (default: 800)')
-    parser.add_argument('--height',
-                       type=int,
-                       default=400,
-                       help='Arena height (default: 400)')
-    parser.add_argument('--no-record',
-                       action='store_true',
-                       help='Disable replay recording')
-    parser.add_argument('--max-frames',
-                       type=int,
-                       default=1800,
-                       help='Maximum frames before timeout (default: 1800)')
-    parser.add_argument('--multiple',
-                       type=int,
-                       default=1,
-                       help='Number of fights to run (default: 1)')
+    # Setup game
+    engine, state = setup_game()
     
-    args = parser.parse_args()
+    # Run fight
+    replay_file = run_fight(engine, state)
     
-    # Create fight generator
-    generator = FightGenerator(
-        player1_fighter=args.p1,
-        player2_fighter=args.p2,
-        arena_width=args.width,
-        arena_height=args.height,
-        record_replay=not args.no_record,
-        max_frames=args.max_frames
-    )
+    # Ask if user wants to view the replay
+    if replay_file:
+        response = input("\nDo you want to view the replay? (y/n): ")
+        if response.lower().startswith('y'):
+            view_replay(replay_file)
     
-    # Run multiple fights if requested
-    all_results = []
-    for i in range(args.multiple):
-        if i > 0:
-            print(f"\n{'#'*60}")
-            print(f"Fight {i+1} of {args.multiple}")
-            print(f"{'#'*60}\n")
-            results = generator.reset_and_run_another()
-        else:
-            results = generator.run_fight()
-        all_results.append(results)
-    
-    # Print summary if multiple fights
-    if args.multiple > 1:
-        print(f"\n{'='*60}")
-        print("SUMMARY OF ALL FIGHTS")
-        print(f"{'='*60}")
-        
-        p1_wins = sum(1 for r in all_results if r['winner'] == 1)
-        p2_wins = sum(1 for r in all_results if r['winner'] == 2)
-        draws = sum(1 for r in all_results if r['winner'] not in [1, 2])
-        
-        print(f"Total Fights: {args.multiple}")
-        print(f"Player 1 ({args.p1}) Wins: {p1_wins} ({p1_wins/args.multiple*100:.1f}%)")
-        print(f"Player 2 ({args.p2}) Wins: {p2_wins} ({p2_wins/args.multiple*100:.1f}%)")
-        print(f"Draws: {draws} ({draws/args.multiple*100:.1f}%)")
-        
-        avg_duration = sum(r['duration_seconds'] for r in all_results) / len(all_results)
-        print(f"\nAverage Fight Duration: {avg_duration:.1f} seconds")
-        
-        avg_p1_health = sum(r['player1_health'] for r in all_results) / len(all_results)
-        avg_p2_health = sum(r['player2_health'] for r in all_results) / len(all_results)
-        print(f"Average Final Health - P1: {avg_p1_health:.1f}, P2: {avg_p2_health:.1f}")
-        
-        print(f"{'='*60}\n")
+    print("\nDone.")
 
 
 if __name__ == "__main__":
