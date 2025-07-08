@@ -15,6 +15,19 @@ run/main_scene="uid://qp51pqptymgt"
 config/features=PackedStringArray("4.4", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+StatManager="*res://scenes/ui/StatManager.gd"
+
+[display]
+
+window/size/viewport_width=3840
+window/size/viewport_height=2160
+
+[gui]
+
+theme/custom_font="uid://bjbmtjyk1q1gf"
+
 [rendering]
 
 renderer/rendering_method="mobile"

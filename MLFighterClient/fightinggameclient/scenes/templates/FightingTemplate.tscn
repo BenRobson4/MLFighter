@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://8wqjsv1h40sx"]
+
+[ext_resource type="Script" uid="uid://blk0f0asr0e5d" path="res://scenes/templates/FightingTemplate.gd" id="1_rv8uj"]
+
+[node name="FightingTemplate" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_rv8uj")

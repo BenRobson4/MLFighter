@@ -7,7 +7,9 @@ from ..globals import State
 class GameState:
     """Represents the complete state of the game"""
     
-    def __init__(self, arena_width: int = ARENA_WIDTH, arena_height: int = ARENA_HEIGHT, 
+    def __init__(self, 
+                 arena_width: int = ARENA_WIDTH, 
+                 arena_height: int = ARENA_HEIGHT, 
                  player1_state: Optional[PlayerState] = None, 
                  player2_state: Optional[PlayerState] = None):
         self.arena_width = arena_width
@@ -32,6 +34,10 @@ class GameState:
     def get_player(self, player_id: int) -> PlayerState:
         """Get player by ID"""
         return self.players[player_id]
+
+    def set_player_state(self, player_id: int, player_state: PlayerState) -> None:
+        """Set state for a specific player"""
+        self.players[player_id] = player_state
     
     def get_opponent(self, player_id: int) -> PlayerState:
         """Get opponent of given player"""

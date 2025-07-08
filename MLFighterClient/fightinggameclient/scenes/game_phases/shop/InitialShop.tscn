@@ -1,0 +1,124 @@
+[gd_scene load_steps=2 format=3 uid="uid://c7yg4adhqgkhj"]
+
+[ext_resource type="Script" uid="uid://cy104xubqaw7h" path="res://scenes/game_phases/shop/InitialShop.gd" id="1_pkorq"]
+
+[node name="InitialShop" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_pkorq")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Choose your fighter"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="FighterButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+alignment = 1
+
+[node name="Fighter1Button" type="Button" parent="MarginContainer/VBoxContainer/FighterButtons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Option 1"
+
+[node name="Fighter2Button" type="Button" parent="MarginContainer/VBoxContainer/FighterButtons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Option 2"
+
+[node name="Fighter3Button" type="Button" parent="MarginContainer/VBoxContainer/FighterButtons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Option 3"
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="FighterInfoPanel" type="Panel" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/FighterInfoPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="FighterInfo" type="VBoxContainer" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="FighterName" type="Label" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+
+[node name="FighterStyle" type="Label" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+
+[node name="FighterDescription2" type="Label" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+text = "Description:"
+
+[node name="FighterDescription" type="RichTextLabel" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 2.0
+bbcode_enabled = true
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+
+[node name="StatsLabel" type="Label" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+text = "Starting stats:"
+
+[node name="FighterStats" type="RichTextLabel" parent="MarginContainer/VBoxContainer/FighterInfoPanel/MarginContainer/FighterInfo"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+fit_content = true
+
+[node name="SelectButton" type="Button" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+text = "Select this fighter"

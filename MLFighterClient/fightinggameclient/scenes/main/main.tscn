@@ -1,0 +1,154 @@
+[gd_scene load_steps=4 format=3 uid="uid://cwf5nrvi57vh6"]
+
+[ext_resource type="Script" uid="uid://bg3onye088nmt" path="res://scenes/main/main.gd" id="1_hyk8p"]
+[ext_resource type="Script" uid="uid://ceafme437mpuc" path="res://scenes/managers/NetworkManager.gd" id="2_k2fmo"]
+[ext_resource type="Script" uid="uid://b2v6a416um0rs" path="res://scenes/managers/GameStateManager.gd" id="3_l3cfh"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_hyk8p")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.199732, 0.199732, 0.199732, 1)
+
+[node name="NetworkManager" type="Node" parent="."]
+script = ExtResource("2_k2fmo")
+
+[node name="GameStateManager" type="Node" parent="."]
+script = ExtResource("3_l3cfh")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopPanel" type="Panel" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/TopPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/TopPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="DebugControls" type="Label" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Debug Controls
+"
+
+[node name="GridContainer" type="GridContainer" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+columns = 3
+
+[node name="ConnectButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Connect"
+
+[node name="DisconnectButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Disconnect"
+
+[node name="PurchaseButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Purchase"
+
+[node name="RefreshShopButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Refresh shop"
+
+[node name="RequestOptionsButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Refresh options"
+
+[node name="InitialShopCompleteButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Initial shop complete"
+
+[node name="ReplayViewedButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Replay viewed"
+
+[node name="ShopPhaseCompleteButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Shop phase complete"
+
+[node name="GetStatusButton" type="Button" parent="VBoxContainer/TopPanel/MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Get status"
+
+[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 400
+
+[node name="LogPanel" type="Panel" parent="VBoxContainer/HSplitContainer"]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HSplitContainer/LogPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/LogPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/HSplitContainer/LogPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Message Log"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/HSplitContainer/LogPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LogText" type="RichTextLabel" parent="VBoxContainer/HSplitContainer/LogPanel/MarginContainer/VBoxContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+bbcode_enabled = true
+
+[node name="GameContent" type="Panel" parent="VBoxContainer/HSplitContainer"]
+layout_mode = 2
+
+[node name="Button" type="Button" parent="VBoxContainer/HSplitContainer/GameContent"]
+layout_mode = 0

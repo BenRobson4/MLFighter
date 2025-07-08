@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://sa2p8h1xwn06"]
 
 [ext_resource type="Script" uid="uid://bocrgpn4vgmsg" path="res://scripts/GameWorld.gd" id="1_13lyd"]
-[ext_resource type="PackedScene" uid="uid://dxc8sjiye2j58" path="res://scenes/Player.tscn" id="1_hpeaq"]
-[ext_resource type="Script" uid="uid://txvmqxt1id5y" path="res://scripts/ReplayManager.gd" id="2_eb18a"]
+[ext_resource type="PackedScene" uid="uid://dxc8sjiye2j58" path="res://scenes/replay/Player.tscn" id="1_hpeaq"]
+[ext_resource type="Script" uid="uid://txvmqxt1id5y" path="res://scripts/Replays/ReplayManager.gd" id="2_eb18a"]
 [ext_resource type="Script" uid="uid://c21kmg8bhmclk" path="res://scripts/ArenaCamera.gd" id="5_5og86"]
 
 [node name="GameWorld" type="Node2D"]

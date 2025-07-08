@@ -45,7 +45,9 @@ class MLAgent:
                  epsilon_decay: float = 0.995,
                  epsilon_min: float = 0.01,
                  learning_rate: float = 0.001,
-                 device: str = None):
+                 initial_feature_mask: Optional[np.ndarray] = None,
+                 device: str = None
+                 ):
         
         # Core parameters
         self.num_features = num_features
@@ -80,7 +82,12 @@ class MLAgent:
         self.episodes = 0
         
         # Feature mask (default: all features active)
-        self.feature_mask = torch.ones(num_features).to(self.device)
+        # Feature mask (default: all features active if not provided)
+        if initial_feature_mask is not None:
+            self.feature_mask = torch.FloatTensor(initial_feature_mask).to(self.device)
+        else:
+            self.feature_mask = torch.ones(num_features).to(self.device)
+
     
     def get_action(self, 
                    state: np.ndarray, 

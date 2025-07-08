@@ -1,0 +1,34 @@
+# Property name mapping for Godot client
+# Metadata properties:
+# "v" = version
+# "aw" = arena_width
+# "ah" = arena_height  
+# "gl" = ground_level
+# "mf" = max_frames
+# "ts" = timestamp_start
+# "te" = timestamp_end
+# "tf" = total_frames
+# "d" = duration_seconds
+# "w" = winner
+# "p1" = player1_fighter
+# "p2" = player2_fighter
+
+# Frame properties:
+# "f" = frame
+# "p" = players
+# "meta" = metadata
+
+# Player properties:
+# "x" = x position
+# "y" = y position
+# "h" = health
+# "vx" = velocity_x
+# "vy" = velocity_y
+# "fr" = facing_right
+# "s" = current_state
+# "sf" = state_frame_counter
+# "g" = is_grounded
+# "ac" = attack_cooldown_remaining
+# "bc" = block_cooldown_remaining
+# "jc" = jump_cooldown_remaining
+# "st" = stun_frames_remaining

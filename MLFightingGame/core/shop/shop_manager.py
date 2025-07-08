@@ -7,8 +7,10 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-# Import your existing dataclasses
+from ..globals.constants import STARTING_GOLD
 from ..data_classes import Weapon, Armour, ShopItem, Purchase
+
+from .fighter_option_generator import FighterOptionGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class ShopManager:
     REFRESH_COST = 10
     ITEMS_PER_SHOP = 5
     
-    def __init__(self, starting_gold: int = 1000, items_directory: str = ".items"):
+    def __init__(self, starting_gold: int = STARTING_GOLD, items_directory: str = "MLFightingGame/core/shop/items"):
         self.starting_gold = starting_gold
         self.items_directory = items_directory
         
@@ -108,6 +110,49 @@ class ShopManager:
             self._generate_shop_for_client(client_id)
             
             logger.info(f"Shop: Registered client {client_id} with {self.starting_gold} gold")
+        
+    def generate_fighter_options(self, client_id: str, num_options: int = 3) -> List[Dict[str, Any]]:
+        """Generate fighter options for initial selection"""        
+        options = FighterOptionGenerator.generate_fighter_options(num_options)
+        
+        # Store options for validation later
+        if not hasattr(self, 'client_fighter_options'):
+            self.client_fighter_options = {}
+        
+        self.client_fighter_options[client_id] = {
+            opt.option_id: opt for opt in options
+        }
+        
+        return [opt.to_dict() for opt in options]
+    
+    def process_fighter_selection(self, client_id: str, option_id: str) -> Tuple[bool, str, Optional[Dict]]:
+        """Process fighter selection and return fighter config"""
+        if not hasattr(self, 'client_fighter_options'):
+            return False, "No fighter options available", None
+        
+        if client_id not in self.client_fighter_options:
+            return False, "No fighter options for this client", None
+        
+        if option_id not in self.client_fighter_options[client_id]:
+            return False, "Invalid fighter option", None
+        
+        # Get the selected option
+        selected = self.client_fighter_options[client_id][option_id]
+        
+        # Create player config
+        player_config = {
+            'fighter_name': selected.fighter_name,
+            'starting_gold': self.starting_gold,
+            'starting_level': 1,
+            'learning_parameters': selected.learning_parameters,
+            'initial_feature_mask': selected.initial_feature_mask,
+            'starting_items': None
+        }
+        
+        # Clear the options after selection
+        del self.client_fighter_options[client_id]
+        
+        return True, "Fighter selected", player_config
             
     def _get_weighted_item_pool(self, client_id: str) -> List[str]:
         """Create a weighted pool of available items based on stock"""
@@ -181,8 +226,12 @@ class ShopManager:
                 item = self.all_items[item_id]
                 item_dict = item.to_dict()
                 
-                # Add client-specific info
-                item_dict["already_purchased"] = item_id in self.purchased_items.get(client_id, set())
+                # Only features check for already purchased
+                if item.category == "features":
+                    item_dict["already_purchased"] = item_id in self.purchased_items.get(client_id, set())
+                else:
+                    item_dict["already_purchased"] = False
+                    
                 item_dict["can_afford"] = item.cost <= self.client_gold.get(client_id, 0)
                 
                 # Add current stock info
@@ -194,6 +243,12 @@ class ShopManager:
                 shop_items.append(item_dict)
                 
         return shop_items
+    
+    def regenerate_shop(self, client_id: str):
+        """Regenerate shop items (free reroll after fights)"""
+        # Simply generate a new shop without charging gold
+        self._generate_shop_for_client(client_id)
+        logger.info(f"Shop regenerated for {client_id} (free post-fight reroll)")
         
     def validate_purchase(self, client_id: str, item_id: str) -> Tuple[bool, str]:
         """Validate if a purchase can be made"""
@@ -207,7 +262,7 @@ class ShopManager:
             
         item = self.all_items[item_id]
         
-        # Check if already purchased (for non-consumables)
+        # Only features are one-time purchases
         if item.category == "features" and item_id in self.purchased_items.get(client_id, set()):
             return False, "Feature already unlocked"
             

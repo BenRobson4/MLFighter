@@ -15,6 +15,7 @@ class ReplayRecorder:
         self.start_time: Optional[float] = None
         self.end_time: Optional[float] = None
         self.replay_directory = Path("replays")
+        self.previous_frame_data: Optional[Dict[str, Any]] = None  # NEW: Store previous frame for delta compression
         
         # Create replays directory if it doesn't exist
         self.replay_directory.mkdir(exist_ok=True, parents=True)
@@ -22,48 +23,80 @@ class ReplayRecorder:
     def start_recording(self, game_state: GameState):
         """Start recording a new fight"""
         self.frames = []
+        self.previous_frame_data = None  # NEW: Reset previous frame data
         self.start_time = time.time()
         
-        # Initialize metadata
+        # Initialize metadata with shorter property names
         self.metadata = {
-            "version": "1.0",
-            "arena_width": game_state.arena_width,
-            "arena_height": game_state.arena_height,
-            "ground_level": game_state.ground_level,
-            "max_frames": game_state.max_frames,
-            "timestamp_start": datetime.now().isoformat(),
-            "player1_fighter": game_state.get_player(1).fighter_name,
-            "player2_fighter": game_state.get_player(2).fighter_name,
+            "v": "1.0",  # version
+            "aw": game_state.arena_width,  # arena_width
+            "ah": game_state.arena_height,  # arena_height
+            "gl": game_state.ground_level,  # ground_level
+            "mf": game_state.max_frames,  # max_frames
+            "ts": datetime.now().isoformat(),  # timestamp_start
+            "p1": game_state.get_player(1).fighter_name,  # player1_fighter
+            "p2": game_state.get_player(2).fighter_name,  # player2_fighter
         }
     
     def record_frame(self, game_state: GameState, frame_counter: int):
-        """Record the current frame's state"""
-        frame_data = {
-            "frame": frame_counter,
-            "players": {}
+        """Record the current frame's state with delta compression"""
+        
+        # Build current frame data
+        current_frame_data = {
+            "f": frame_counter,  # frame
+            "p": {}  # players
         }
         
-        # Record data for each player
+        # Collect current player data
         for player_id in [1, 2]:
             player_state = game_state.get_player(player_id)
             
-            frame_data["players"][player_id] = {
-                "x": player_state.x,
-                "y": player_state.y,
-                "health": player_state.health,
-                "velocity_x": player_state.velocity_x,
-                "velocity_y": player_state.velocity_y,
-                "facing_right": player_state.facing_right,
-                "current_state": player_state.current_state.name,
-                "state_frame_counter": player_state.state_frame_counter,
-                "is_grounded": player_state.is_grounded,
-                "attack_cooldown_remaining": player_state.attack_cooldown_remaining,
-                "block_cooldown_remaining": player_state.block_cooldown_remaining,
-                "jump_cooldown_remaining": player_state.jump_cooldown_remaining,
-                "stun_frames_remaining": player_state.stun_frames_remaining,
+            current_frame_data["p"][player_id] = {
+                "x": round(player_state.x, 2),
+                "y": round(player_state.y, 2),
+                "h": player_state.health,                         # health
+                "vx": round(player_state.velocity_x, 2),          # velocity_x
+                "vy": round(player_state.velocity_y, 2),          # velocity_y
+                "fr": player_state.facing_right,                  # facing_right
+                "s": player_state.current_state.name,             # current_state
+                "sf": player_state.state_frame_counter,           # state_frame_counter
+                "g": player_state.is_grounded,                    # is_grounded
+                "ac": player_state.attack_cooldown_remaining,     # attack_cooldown_remaining
+                "bc": player_state.block_cooldown_remaining,      # block_cooldown_remaining
+                "jc": player_state.jump_cooldown_remaining,       # jump_cooldown_remaining
+                "st": player_state.stun_frames_remaining,         # stun_frames_remaining
             }
         
-        self.frames.append(frame_data)
+        # Apply delta compression
+        if self.previous_frame_data is None:
+            # First frame - store everything
+            compressed_frame = current_frame_data
+        else:
+            # Subsequent frames - only store differences
+            compressed_frame = {
+                "f": frame_counter,
+                "p": {}
+            }
+            
+            for player_id in [1, 2]:
+                current_player = current_frame_data["p"][player_id]
+                previous_player = self.previous_frame_data["p"].get(player_id, {})
+                
+                # Find differences
+                player_diff = {}
+                for key, value in current_player.items():
+                    if key not in previous_player or previous_player[key] != value:
+                        player_diff[key] = value
+                
+                # Only include player data if there are changes
+                if player_diff:
+                    compressed_frame["p"][player_id] = player_diff
+        
+        # Store the compressed frame
+        self.frames.append(compressed_frame)
+        
+        # Update previous frame data for next comparison
+        self.previous_frame_data = current_frame_data
     
     def save_replay(self, winner: int = 0):
         """Save the recorded replay to a file"""
@@ -72,30 +105,30 @@ class ReplayRecorder:
         
         self.end_time = time.time()
         
-        # Update metadata with fight results
-        self.metadata["timestamp_end"] = datetime.now().isoformat()
-        self.metadata["total_frames"] = len(self.frames)
-        self.metadata["duration_seconds"] = round(self.end_time - self.start_time, 2)
-        self.metadata["winner"] = winner
+        # Update metadata with fight results (using short property names)
+        self.metadata["te"] = datetime.now().isoformat()  # timestamp_end
+        self.metadata["tf"] = len(self.frames)  # total_frames
+        self.metadata["d"] = round(self.end_time - self.start_time, 2)  # duration_seconds
+        self.metadata["w"] = winner  # winner
         
         # Create replay data structure
         replay_data = {
-            "metadata": self.metadata,
+            "meta": self.metadata,  # metadata -> meta
             "frames": self.frames
         }
         
         # Generate filename with timestamp and winner info
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        p1_name = self.metadata["player1_fighter"] or "p1"
-        p2_name = self.metadata["player2_fighter"] or "p2"
+        p1_name = self.metadata["p1"] or "p1"
+        p2_name = self.metadata["p2"] or "p2"
         winner_suffix = f"_winner_p{winner}" if winner in [1, 2] else "_draw"
         
         filename = f"{timestamp}_{p1_name}_vs_{p2_name}{winner_suffix}.json"
         filepath = self.replay_directory / filename
         
-        # Save to file
+        # Save to file with minimal formatting
         with open(filepath, 'w') as f:
-            json.dump(replay_data, f, indent=2)
+            json.dump(replay_data, f, separators=(',', ':'))  # No whitespace
         
         print(f"Replay saved to {filepath}")
         return filepath

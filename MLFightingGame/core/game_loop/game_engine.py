@@ -354,7 +354,7 @@ class GameEngine:
         for player in [self.player_1.state, self.player_2.state]:
             player_id = player.player_id
             if player.health <= 0:
-                self.game_over = True
+                self.fight_over = True
                 self.winner = 2 if player_id == 1 else 1
 
         
@@ -410,9 +410,6 @@ class GameEngine:
             
         if self.is_recording:
             self._record_frame()
-        
-        if self.fight_over and self.is_recording:
-            self._save_replay()
 
     def _validate_player_health(self):
         """Ensure player health values are within valid bounds"""
@@ -447,9 +444,3 @@ class GameEngine:
         # Record frame if recorder exists
         if self.replay_recorder is not None:
             self.replay_recorder.record_frame(self.state, self.frame_counter)
-
-    def _save_replay(self):
-        """Save the recorded replay to a file"""
-        if self.replay_recorder is not None:
-            self.replay_recorder.save_replay(self.winner)
-            self.replay_recorder = None  # Clear recorder after saving

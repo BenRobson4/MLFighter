@@ -41,7 +41,7 @@ class FighterLoader:
         # Load from file
         if cls._config_path is None:
             # Default path - adjust based on your project structure
-            cls._config_path = Path(__file__).parent.parent / "configs" / "fighters.json"
+            cls._config_path = Path(__file__).parent.parent / "players" / "fighters.json"
         
         try:
             with open(cls._config_path, 'r') as f:
@@ -140,7 +140,7 @@ class FighterLoader:
             Dict mapping fighter type to description
         """
         if cls._config_path is None:
-            cls._config_path = Path(__file__).parent.parent / "configs" / "fighters.json"
+            cls._config_path = Path(__file__).parent.parent / "players" / "fighters.json"
         
         with open(cls._config_path, 'r') as f:
             data = json.load(f)

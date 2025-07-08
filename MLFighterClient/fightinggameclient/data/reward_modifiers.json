@@ -1,0 +1,60 @@
+{
+    "distance_x" : {
+        "basic_positive" : {
+            "description" : "Slightly increases the reward you fighter receives for reducing the distance between the two fighters.",
+            "tier" : 1,
+            "cost" : 1,
+            "delta" : 2,
+            "stock" : 50
+        },
+        "basic_negative" : {
+            "description" : "Slightly decreases the reward you fighter receives for reducing the distance between the two fighters.",
+            "tier" : 1,
+            "cost" : 1,
+            "delta" : -2,
+            "stock" : 50
+        },
+        "moderate_positive" : {
+            "description" : "Moderately increases the reward you fighter receives for reducing the distance between the two fighters.",
+            "tier" : 2,
+            "cost" : 1,
+            "delta" : 8,
+            "stock" : 40
+        },
+        "medium_" : {
+            "description" : "Moderately decreases the reward you fighter receives for reducing the distance between the two fighters.",
+            "tier" : 2,
+            "cost" : 1,
+            "delta" : -8,
+            "stock" : 40
+        },
+        "extreme_positive" : {
+            "description" : "Drastically increases the reward you fighter receives for reducing the distance between the two fighters.",
+            "tier" : 3,
+            "cost" : 2,
+            "delta" : 20,
+            "stock" : 20
+        },
+        "extreme_negative" : {
+            "description" : "Drastically decreases the reward you fighter receives for reducing the distance between the two fighters.",
+            "tier" : 3,
+            "cost" : 2,
+            "delta" : -20,
+            "stock" : 20
+        },
+        "insane_positive" : {
+            "description" : "Increases the reward you fighter receives for reducing the distance between the two fighters by an absurd amount.",
+            "tier" : 4,
+            "cost" : 5,
+            "delta" : 100,
+            "stock" : 5
+        },
+        "insane_negative" : {
+            "description" : "Decreases the reward you fighter receives for reducing the distance between the two fighters by an absurd amount.",
+            "tier" : 4,
+            "cost" : 5,
+            "delta" : -100,
+            "stock" : 5
+        }
+    }
+}

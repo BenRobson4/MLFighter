@@ -1,9 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://cgsgf0fciw5tn"]
 
-[ext_resource type="Script" uid="uid://dmekopwcdwol4" path="res://scripts/Main.gd" id="1_0bbpv"]
-[ext_resource type="PackedScene" uid="uid://sa2p8h1xwn06" path="res://scenes/GameWorld.tscn" id="1_rvslj"]
-[ext_resource type="PackedScene" uid="uid://dsgb272wk5fqp" path="res://scenes/TopBar.tscn" id="3_rarhs"]
-[ext_resource type="PackedScene" uid="uid://f8og2m06nje" path="res://scenes/BottomBar.tscn" id="4_vcsgt"]
+[ext_resource type="Script" uid="uid://dmekopwcdwol4" path="res://scripts/Main.gd" id="1_7nc2c"]
+[ext_resource type="PackedScene" uid="uid://dsgb272wk5fqp" path="res://scenes/replay/TopBar.tscn" id="2_wxunm"]
+[ext_resource type="PackedScene" uid="uid://sa2p8h1xwn06" path="res://scenes/replay/GameWorld.tscn" id="3_7srdb"]
+[ext_resource type="PackedScene" uid="uid://f8og2m06nje" path="res://scenes/replay/BottomBar.tscn" id="4_oucbh"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -12,7 +12,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_0bbpv")
+script = ExtResource("1_7nc2c")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -22,7 +22,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TopBar" parent="VBoxContainer" instance=ExtResource("3_rarhs")]
+[node name="TopBar" parent="VBoxContainer" instance=ExtResource("2_wxunm")]
 custom_minimum_size = Vector2(0, 75)
 layout_mode = 2
 
@@ -40,15 +40,14 @@ offset_right = 40.0
 offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 2
-stretch = true
 
 [node name="GameViewport" type="SubViewport" parent="VBoxContainer/ArenaSection/ArenaBackground/GameViewportContainer"]
 handle_input_locally = false
 size = Vector2i(40, 2)
 render_target_update_mode = 4
 
-[node name="GameWorld" parent="VBoxContainer/ArenaSection/ArenaBackground/GameViewportContainer/GameViewport" instance=ExtResource("1_rvslj")]
+[node name="GameWorld" parent="VBoxContainer/ArenaSection/ArenaBackground/GameViewportContainer/GameViewport" instance=ExtResource("3_7srdb")]
 
-[node name="BottomBar" parent="VBoxContainer" instance=ExtResource("4_vcsgt")]
+[node name="BottomBar" parent="VBoxContainer" instance=ExtResource("4_oucbh")]
 custom_minimum_size = Vector2(0, 75)
 layout_mode = 2

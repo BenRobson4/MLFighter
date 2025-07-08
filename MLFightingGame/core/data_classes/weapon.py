@@ -16,6 +16,7 @@ class Weapon:
     hit_stun_frames_modifier: int = 0 # How many more/fewer frames the opponent is stunned for when hit by this weapon
     block_stun_frames_modifier: int = 0 # How many more/fewer frames the opponent is stunned for when blocking with this weapon
     rarity: str = 'common' # The rarity of the weapon, e.g., common, rare, epic, legendary
+    equipped: bool = False
     
     def to_dict(self) -> Dict:
         return {
@@ -26,5 +27,6 @@ class Weapon:
             'y_attack_range_modifier': self.y_attack_range_modifier,
             'attack_damage_modifier': self.attack_damage_modifier,
             'attack_cooldown_modifier': self.attack_cooldown_modifier,
-            'rarity': self.rarity
+            'rarity': self.rarity,
+            'equipped': self.equipped
         }

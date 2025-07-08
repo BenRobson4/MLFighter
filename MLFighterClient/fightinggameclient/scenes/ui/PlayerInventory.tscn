@@ -1,0 +1,97 @@
+[gd_scene load_steps=4 format=3 uid="uid://bcfrx6bt71uy3"]
+
+[ext_resource type="PackedScene" uid="uid://bsrwvl8qyv3v1" path="res://scenes/ui/FighterDisplay.tscn" id="1_i8iet"]
+[ext_resource type="PackedScene" uid="uid://chlsp0fwtefib" path="res://scenes/ui/ItemSlot.tscn" id="2_r8nnh"]
+[ext_resource type="Texture2D" uid="uid://bb18eb5qu1mdo" path="res://sprites/placeholder.jpg" id="3_r8nnh"]
+
+[node name="PlayerInventory" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="FighterSection" type="Control" parent="MainContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="FighterDisplay" parent="MainContainer/FighterSection" instance=ExtResource("1_i8iet")]
+layout_mode = 1
+
+[node name="Separator" type="HSeparator" parent="MainContainer"]
+layout_mode = 2
+
+[node name="ColorRect" type="ColorRect" parent="MainContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.3
+color = Color(0.487695, 0.0299239, 0.27409, 1)
+
+[node name="InventorySection" type="VBoxContainer" parent="MainContainer/ColorRect"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.3
+
+[node name="InventoryLabel" type="Label" parent="MainContainer/ColorRect/InventorySection"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.2
+text = "Inventory"
+
+[node name="InventoryGrid" type="HBoxContainer" parent="MainContainer/ColorRect/InventorySection"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ItemSlot" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")
+
+[node name="ItemSlot2" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")
+
+[node name="ItemSlot3" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")
+
+[node name="ItemSlot4" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")
+
+[node name="ItemSlot5" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")
+
+[node name="ItemSlot6" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")
+
+[node name="ItemSlot7" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")
+
+[node name="ItemSlot8" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
+layout_mode = 2
+size_flags_horizontal = 6
+default_border = ExtResource("3_r8nnh")

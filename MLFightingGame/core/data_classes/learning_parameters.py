@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict
 import logging
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,10 @@ class LearningParameters:
             self.learning_rate = max(0.0001, min(0.01, self.learning_rate + delta))
         else:
             logger.warning(f"Unknown modifier type: {modifier_type}")
+
+    def copy(self):
+        """Create a deep copy of the learning parameters"""
+        return copy.deepcopy(self)
             
     def to_dict(self) -> Dict:
         return {

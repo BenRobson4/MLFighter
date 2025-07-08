@@ -1,0 +1,54 @@
+{
+    "light": {
+        "leather_armour": {
+            "name": "Leather Armour",
+            "description": "Light and flexible protection",
+            "gravity_modifier": 1.0,
+            "jump_force_modifier": 0,
+            "move_speed_modifier": -2,
+            "health_modifier": 10,
+            "damage_received_modifier": -5,
+            "rarity": "common",
+            "cost": 150,
+            "stock": 8
+        },
+        "rogue_attire": {
+            "name": "Rogue's Attire",
+            "description": "Armor that enhances agility",
+            "gravity_modifier": 0.95,
+            "jump_force_modifier": 5,
+            "move_speed_modifier": 5,
+            "health_modifier": 5,
+            "damage_received_modifier": -3,
+            "rarity": "uncommon",
+            "cost": 300,
+            "stock": 4
+        }
+    },
+    "heavy": {
+        "iron_plate": {
+            "name": "Iron Plate Mail",
+            "description": "Heavy but protective armor",
+            "gravity_modifier": 1.2,
+            "jump_force_modifier": -10,
+            "move_speed_modifier": -15,
+            "health_modifier": 30,
+            "damage_received_modifier": -20,
+            "rarity": "uncommon",
+            "cost": 400,
+            "stock": 3
+        },
+        "dragon_scale": {
+            "name": "Dragon Scale Armor",
+            "description": "Legendary armor forged from dragon scales",
+            "gravity_modifier": 1.1,
+            "jump_force_modifier": -5,
+            "move_speed_modifier": -5,
+            "health_modifier": 50,
+            "damage_received_modifier": -40,
+            "rarity": "legendary",
+            "cost": 1500,
+            "stock": 1
+        }
+    }
+}

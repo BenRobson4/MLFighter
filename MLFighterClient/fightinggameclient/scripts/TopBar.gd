@@ -20,7 +20,7 @@ func _ready():
 	if background:
 		background.color = Color(0.1, 0.1, 0.1, 0.9)
 
-func initialize_health_bars(player1_health: float, player2_health: float):
+func initialise_health_bars(player1_health: float, player2_health: float):
 	player1_max_health = player1_health
 	player2_max_health = player2_health
 	

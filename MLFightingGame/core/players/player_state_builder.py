@@ -39,14 +39,14 @@ class PlayerStateBuilder:
         
         # Determine facing direction based on player_id
         facing_right = (player_id == 1)
-
-        if spawn_x == None:
+        if player_id == 0:
+            spawn_x = None
+            spawn_y = None
+        elif spawn_x == None:
             if player_id == 1:
                 spawn_x = SPAWN_MARGIN
             else:
                 spawn_x = ARENA_WIDTH - SPAWN_MARGIN
-        
-        if spawn_y == None:
             spawn_y = GROUND_LEVEL
         
         # Create the PlayerState

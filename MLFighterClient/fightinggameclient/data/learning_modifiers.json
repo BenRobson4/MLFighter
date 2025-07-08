@@ -1,0 +1,85 @@
+{
+    "epsilon": {
+        "basic_increase": {
+            "description": "Slightly increases exploration rate",
+            "tier": 1,
+            "cost": 50,
+            "delta": 0.05,
+            "stock": 20
+        },
+        "basic_decrease": {
+            "description": "Slightly decreases exploration rate",
+            "tier": 1,
+            "cost": 50,
+            "delta": -0.05,
+            "stock": 20
+        },
+        "moderate_increase": {
+            "description": "Moderately increases exploration rate",
+            "tier": 2,
+            "cost": 150,
+            "delta": 0.15,
+            "stock": 10
+        },
+        "moderate_decrease": {
+            "description": "Moderately decreases exploration rate",
+            "tier": 2,
+            "cost": 150,
+            "delta": -0.15,
+            "stock": 10
+        },
+        "extreme_increase": {
+            "description": "Drastically increases exploration rate",
+            "tier": 3,
+            "cost": 400,
+            "delta": 0.3,
+            "stock": 5
+        }
+    },
+    "learning_rate": {
+        "basic_increase": {
+            "description": "Slightly increases learning speed",
+            "tier": 1,
+            "cost": 75,
+            "delta": 0.0001,
+            "stock": 15
+        },
+        "basic_decrease": {
+            "description": "Slightly decreases learning speed",
+            "tier": 1,
+            "cost": 75,
+            "delta": -0.0001,
+            "stock": 15
+        },
+        "moderate_increase": {
+            "description": "Moderately increases learning speed",
+            "tier": 2,
+            "cost": 200,
+            "delta": 0.0005,
+            "stock": 8
+        },
+        "extreme_increase": {
+            "description": "Drastically increases learning speed",
+            "tier": 3,
+            "cost": 500,
+            "delta": 0.001,
+            "stock": 3
+        }
+    },
+    "decay": {
+        "basic_increase": {
+            "description": "Slightly increases epsilon decay rate",
+            "tier": 1,
+            "cost": 60,
+            "delta": 0.00001,
+            "stock": 18
+        },
+        "moderate_increase": {
+            "description": "Moderately increases epsilon decay rate",
+            "tier": 2,
+            "cost": 180,
+            "delta": 0.00005,
+            "stock": 9
+        }
+    }
+}

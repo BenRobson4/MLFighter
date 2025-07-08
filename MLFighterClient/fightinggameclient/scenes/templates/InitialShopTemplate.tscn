@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://54b0oksux5ut"]
+
+[ext_resource type="Script" uid="uid://b75ev3r30p5k6" path="res://scenes/templates/InitialShopTemplate.gd" id="1_mtq6g"]
+
+[node name="InitialShopTemplate" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_mtq6g")

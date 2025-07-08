@@ -4,14 +4,14 @@ import json
 import logging
 from pathlib import Path
 import numpy as np
-import random
 
-from ..data_classes import Fighter, Weapon, Armour, PlayerState, LearningParameters, PlayerInventory
+from ..data_classes import Fighter, Weapon, Armour, LearningParameters, PlayerInventory
 from .ml_agent import MLAgent
 from .fighter_loader import FighterLoader
 from .player_state_builder import PlayerStateBuilder
 from .player_state_machine import StateMachine
 from ..globals import Action, State
+from ..globals.constants import ARENA_WIDTH, SPAWN_MARGIN, GROUND_LEVEL
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +23,10 @@ class Player(MLAgent):
                  starting_gold: int = 1000,
                  starting_level: int = 1,
                  learning_parameters: Optional[LearningParameters] = None,
+                 initial_feature_mask: Optional[np.ndarray] = None,
                  items: Optional[PlayerInventory] = None,
                  num_actions: int = 6,
                  num_features: int = 20):
-        
-        super().__init__(num_features=num_features, num_actions=num_actions)
-
         # Player identification
         self.player_id = player_id
         
@@ -53,24 +51,29 @@ class Player(MLAgent):
         
         # Learning parameters
         self.learning_parameters = learning_parameters or LearningParameters()
-        self._apply_learning_modifiers()
+        self.base_learning_parameters = self.learning_parameters.copy()  # Store base parameters
         
-        # Initialize ML Agent
+        self.initial_feature_mask = initial_feature_mask
+
+        # Initialize ML Agent with feature mask
         super().__init__(
             num_features=num_features,
             num_actions=num_actions,
             epsilon=self.learning_parameters.epsilon,
             epsilon_decay=self.learning_parameters.epsilon_decay,
             epsilon_min=self.learning_parameters.epsilon_min,
-            learning_rate=self.learning_parameters.learning_rate
+            learning_rate=self.learning_parameters.learning_rate,
+            initial_feature_mask=self.initial_feature_mask  # Pass to parent
         )
         
+        self._apply_learning_modifiers()
+
         # Player state (managed by GameEngine)
         self.state = PlayerStateBuilder.build(
             player=self,
-            player_id=1,
-            spawn_x=0.0,
-            spawn_y=0.0
+            player_id=self.player_id,
+            spawn_x=None,
+            spawn_y=None
         )
 
         self.state_machine = StateMachine(self.state)
@@ -79,10 +82,25 @@ class Player(MLAgent):
         self.total_reward = 0
         self.wins = 0
         self.losses = 0
-        self.matches_played = 0
+        self.total_fights = 0
+        self.batch_history = []
         self.actions_taken = 0
         
         logger.info(f"Player {player_id} initialized with fighter {fighter.name}")
+    
+    def set_player_id(self, player_id: int):
+        """Update player ID and reset position based on new ID"""
+        self.player_id = player_id
+        self.state.player_id = player_id
+        
+        # Update spawn position based on new ID
+        self.state.start_y = GROUND_LEVEL
+        if player_id == 1:
+            self.state.start_x = SPAWN_MARGIN  # Player 1 spawn
+            self.state.x = self.state.start_x
+        else:
+            self.state.start_x = ARENA_WIDTH - SPAWN_MARGIN  # Player 2 spawn
+            self.state.x = self.state.start_x
         
     def _create_modified_fighter(self, base_fighter: Fighter, items: Optional[PlayerInventory]) -> Fighter:
         """Create a fighter with stats modified by equipped items"""
@@ -93,7 +111,11 @@ class Player(MLAgent):
         modified_fighter = Fighter(
             name=base_fighter.name,
 
+            width=base_fighter.width,
+            height=base_fighter.height,
+
             gravity=base_fighter.gravity,
+            friction=base_fighter.friction,
             jump_force=base_fighter.jump_force,
             jump_cooldown=base_fighter.jump_cooldown,
             move_speed=base_fighter.move_speed,
@@ -143,7 +165,7 @@ class Player(MLAgent):
     def _apply_learning_modifiers(self):
         """Apply all learning modifiers to parameters"""
         # Reset to base values before applying modifiers
-        base_params = LearningParameters()
+        self.learning_parameters = self.base_learning_parameters.copy()
         
         # Apply all modifiers
         for category, modifiers in self.inventory.learning_modifiers.items():
@@ -157,6 +179,21 @@ class Player(MLAgent):
             epsilon_decay=self.learning_parameters.epsilon_decay,
             learning_rate=self.learning_parameters.learning_rate
         )
+
+    def _update_feature_mask(self):
+        """Update feature map in the ML agent"""
+        if self.initial_feature_mask is not None:
+            self.feature_mask = self.initial_feature_mask.copy()
+        else:
+            # Default to all features enabled
+            self.feature_mask = np.ones(self.num_features, dtype=bool)
+        
+        # Apply any feature modifiers from inventory
+        for feature in self.inventory.features:
+            if feature in self.feature_mask:
+                self.feature_mask[feature] = True
+        
+        super().update_parameters(feature_mask=self.feature_mask)
 
     def get_hitbox(self) -> Tuple[float, float, float, float]:
         """Get current hitbox as (x1, y1, x2, y2)"""
@@ -216,6 +253,8 @@ class Player(MLAgent):
         """Add an item to the player's inventory from shop purchase"""
         category = item_data.get("category")
         
+        logger.info(f"Player {self.player_id} adding item {item_id} of category {category}")
+        
         if category == "weapons":
             weapon = Weapon(
                 name=item_data.get("name"),
@@ -226,10 +265,13 @@ class Player(MLAgent):
                 y_attack_range_modifier=item_data.get("y_attack_range_modifier", 0),
                 attack_damage_modifier=item_data.get("attack_damage_modifier", 0),
                 attack_cooldown_modifier=item_data.get("attack_cooldown_modifier", 0),
+                hit_stun_frames_modifier=item_data.get("hit_stun_frames_modifier", 0),
+                block_stun_frames_modifier=item_data.get("block_stun_frames_modifier", 0),
                 rarity=item_data.get("rarity", "common")
             )
             self.inventory.add_weapon(weapon)
             self._update_fighter_stats()
+            logger.info(f"Added weapon {weapon.name}, now have {len(self.inventory.weapons)} weapons")
             
         elif category == "armour":
             armour = Armour(
@@ -239,28 +281,49 @@ class Player(MLAgent):
                 jump_force_modifier=item_data.get("jump_force_modifier", 0),
                 move_speed_modifier=item_data.get("move_speed_modifier", 0),
                 health_modifier=item_data.get("health_modifier", 0),
-                damage_received_modifier=item_data.get("damage_received_modifier", 0),
+                damage_reduction_modifier=item_data.get("damage_reduction_modifier", 0),
                 rarity=item_data.get("rarity", "common")
             )
             self.inventory.add_armour(armour)
             self._update_fighter_stats()
+            logger.info(f"Added armour {armour.name}, now have {len(self.inventory.armour)} armour pieces")
             
         elif category == "reward_modifiers":
             subcategory = item_data.get("subcategory")
             self.inventory.add_reward_modifier(subcategory, item_data)
+            logger.info(f"Added reward modifier for {subcategory}")
             
         elif category == "learning_modifiers":
             subcategory = item_data.get("subcategory")
             self.inventory.add_learning_modifier(subcategory, item_data)
             self._apply_learning_modifiers()
+            logger.info(f"Added learning modifier for {subcategory}")
             
         elif category == "features":
-            # Extract feature name from item data
-            feature_name = item_data.get("properties", {}).get("category", "unknown")
-            self.inventory.add_feature(feature_name)
+            # Extract feature index from item data
+            feature_properties = item_data.get("properties", {})
+            feature_index = feature_properties.get("feature_index")
+            feature_name = item_data.get("name", f"feature_{feature_index}")
             
-        logger.info(f"Player {self.player_id} added item: {item_id}")
+            if feature_index is not None and feature_index < self.num_features:
+                # Update feature mask to enable this feature
+                current_mask = self.feature_mask.cpu().numpy()
+                current_mask[feature_index] = 1
+                
+                # Update ML agent's feature mask
+                super().update_parameters(feature_mask=current_mask)
+                
+                # Add to inventory for tracking
+                self.inventory.add_feature(feature_name)
+                
+                logger.info(f"Player {self.player_id} unlocked feature {feature_index}: {feature_name}")
+            else:
+                logger.warning(f"Invalid feature index {feature_index} in item {item_id}")
+        else:
+            logger.warning(f"Unknown item category: {category}")
         
+        logger.info(f"Player {self.player_id} inventory updated with item: {item_id}")
+
     def _update_fighter_stats(self):
         """Recalculate fighter stats based on current items"""
         self.fighter = self._create_modified_fighter(self.base_fighter, self.inventory)
@@ -344,8 +407,6 @@ class Player(MLAgent):
                 elif previous_state == State.JUMP_RECOVERY:
                     self.state.jump_cooldown_remaining = self.state.jump_cooldown
             
-
-    
     def update(self, 
                state: np.ndarray, 
                action: int, 
@@ -390,15 +451,38 @@ class Player(MLAgent):
         """Add experience to player"""
         self.experience += amount
         
-    def end_match(self, won: bool, total_reward: float):
-        """Record match results"""
-        self.matches_played += 1
-        self.total_reward += total_reward
+    def end_batch(self, wins: int, losses: int):
+        """
+        Update player statistics after a batch of fights completes.
         
-        if won:
-            self.wins += 1
-        else:
-            self.losses += 1
+        Args:
+            wins: Number of wins in this batch
+            losses: Number of losses in this batch
+        """
+        # Update win/loss record
+        self.wins += wins
+        self.losses += losses
+        
+        # Update total fights
+        self.total_fights = self.wins + self.losses
+        
+        # Log the batch results
+        logger.info(f"Player {self.fighter.name} batch complete: "
+                    f"{wins} wins, {losses} losses "
+                    f"(Total: {self.wins}W-{self.losses}L)")
+        
+        # Optional: You could add batch-level learning updates here
+        # For example, adjusting exploration rate based on performance
+        # or saving model checkpoints after batches
+        
+        # Optional: Track performance metrics
+        if hasattr(self, 'batch_history'):
+            self.batch_history.append({
+                'wins': wins,
+                'losses': losses,
+                'win_rate': wins / (wins + losses) if (wins + losses) > 0 else 0
+            })
+
             
     def get_stats(self) -> Dict:
         """Get player statistics"""
@@ -407,11 +491,11 @@ class Player(MLAgent):
             "level": self.level,
             "gold": self.gold,
             "experience": self.experience,
-            "matches_played": self.matches_played,
+            "total_fights": self.total_fights,
             "wins": self.wins,
             "losses": self.losses,
-            "win_rate": self.wins / max(1, self.matches_played),
-            "average_reward": self.total_reward / max(1, self.matches_played),
+            "win_rate": self.wins / max(1, self.total_fights),
+            "average_reward": self.total_reward / max(1, self.total_fights),
             "fighter_name": self.fighter.name,
             "items_owned": len(self.inventory.weapons) + len(self.inventory.armour),
             "learning_params": self.learning_parameters.to_dict(),
@@ -427,11 +511,12 @@ class Player(MLAgent):
             "level": self.level,
             "experience": self.experience,
             "stats": {
-                "matches_played": self.matches_played,
+                "total_fights": self.total_fights,
                 "wins": self.wins,
                 "losses": self.losses,
                 "total_reward": self.total_reward,
-                "actions_taken": self.actions_taken
+                "actions_taken": self.actions_taken,
+                "batch_history": self.batch_history
             },
             "base_fighter": self.state.fighter_name,
             "inventory": self.inventory.to_dict(),
@@ -485,7 +570,8 @@ class Player(MLAgent):
         
         # Restore stats
         player.experience = data["experience"]
-        player.matches_played = data["stats"]["matches_played"]
+        player.total_fights = data["stats"]["total_fights"]
+        player.batch_history = data["stats"]["batch_history"]
         player.wins = data["stats"]["wins"]
         player.losses = data["stats"]["losses"]
         player.total_reward = data["stats"]["total_reward"]

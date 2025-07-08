@@ -37,7 +37,7 @@ func setup_camera_for_arena(width: float, height: float):
 func setup_camera():
 	# Position camera to show the full arena
 	var camera_x = arena_width / 2.0
-	var camera_y = -arena_height / 2.0  # Center vertically in arena
+	var camera_y = -arena_height / 2.0 
 	
 	global_position = Vector2(camera_x, camera_y)
 	

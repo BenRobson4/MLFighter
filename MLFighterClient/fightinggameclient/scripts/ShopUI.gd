@@ -32,7 +32,7 @@ func _ready():
 		$VBoxContainer/HBoxContainer.add_child(purchases_button)
 	purchases_button.pressed.connect(_on_purchases_pressed)
 	
-	# Initialize WebSocket
+	# Initialise WebSocket
 	websocket = WebSocketPeer.new()
 	connect_to_server()
 

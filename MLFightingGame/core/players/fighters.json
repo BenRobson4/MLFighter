@@ -168,8 +168,8 @@
       "base_stats": {
         "gravity": 8.5,
         "friction": 0.12,
-        "width": 45,
-        "height": 95,
+        "width": 25,
+        "height": 33,
         "jump_force": 13,
         "jump_cooldown": 20,
         "move_speed": 8,

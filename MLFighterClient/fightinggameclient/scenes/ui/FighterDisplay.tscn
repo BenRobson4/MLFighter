@@ -1,0 +1,123 @@
+[gd_scene load_steps=3 format=3 uid="uid://bsrwvl8qyv3v1"]
+
+[ext_resource type="Script" uid="uid://xy0dp141rpdx" path="res://scenes/ui/FighterDisplay.gd" id="1_kmyep"]
+[ext_resource type="PackedScene" uid="uid://dxc8sjiye2j58" path="res://scenes/replay/Player.tscn" id="2_6he4x"]
+
+[node name="FighterDisplay" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_kmyep")
+
+[node name="MainContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="StatsPanel" type="PanelContainer" parent="MainContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.5
+
+[node name="StatsMargin" type="MarginContainer" parent="MainContainer/StatsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="StatsList" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="HealthStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HealthLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/HealthStat"]
+layout_mode = 2
+text = "Health:"
+
+[node name="HealthBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/HealthStat"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+show_percentage = false
+
+[node name="AttackStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AttackLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/AttackStat"]
+layout_mode = 2
+text = "Attack:"
+
+[node name="AttackBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/AttackStat"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+show_percentage = false
+
+[node name="DefenseStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DefenseLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/DefenseStat"]
+layout_mode = 2
+text = "Defense\""
+
+[node name="DefenseBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/DefenseStat"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+show_percentage = false
+
+[node name="SpeedStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SpeedLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpeedStat"]
+layout_mode = 2
+text = "Speed:"
+
+[node name="SpeedBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpeedStat"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+show_percentage = false
+
+[node name="SpecialStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SpecialLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpecialStat"]
+layout_mode = 2
+text = "Special:"
+
+[node name="SpecialBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpecialStat"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+show_percentage = false
+
+[node name="FighterPanel" type="PanelContainer" parent="MainContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FighterMargin" type="MarginContainer" parent="MainContainer/FighterPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="ColorRect" type="ColorRect" parent="MainContainer/FighterPanel/FighterMargin"]
+layout_mode = 2
+
+[node name="SpriteCenter" type="CenterContainer" parent="MainContainer/FighterPanel/FighterMargin"]
+layout_mode = 2
+
+[node name="Player" parent="MainContainer/FighterPanel/FighterMargin/SpriteCenter" instance=ExtResource("2_6he4x")]
+position = Vector2(206, 326)

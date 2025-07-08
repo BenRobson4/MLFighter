@@ -13,6 +13,7 @@ class Armour:
     health_modifier: int # How the item affects the character's health
     damage_reduction_modifier: int  # How the damage that landed attack deal is modified
     rarity: str = 'common' # The rarity of the weapon, e.g., common, rare, epic, legendary
+    equipped: bool = False
     
     def to_dict(self) -> Dict:
         return {
@@ -21,5 +22,6 @@ class Armour:
             'move_speed_modifier': self.move_speed_modifier,
             'health_modifier': self.health_modifier,
             'damage_reduction_modifier': self.damage_reduction_modifier,
-            'rarity': self.rarity
+            'rarity': self.rarity,
+            'equipped': self.equipped
         }
