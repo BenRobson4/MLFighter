@@ -248,38 +248,66 @@ class GameCoordinator:
         await self.send_to_client(client_id, {
             "type": ServerMessageType.PURCHASE_RESULT.value,
             "success": success,
-            "option_id": item_id,
+            "item_id": item_id,
+            "cost": purchase.get("cost", 0) if purchase else 0,
             "remaining_gold": self.shop_manager.get_client_gold(client_id),
             "reason": reason
         })
-        
-        # Send updated options if successful
-        if success:
-            await self.handle_options_request(client_id, {})
             
     async def handle_refresh_request(self, client_id: str, data: Dict[str, Any]):
         """Handle shop refresh request"""
         success, message = self.shop_manager.refresh_shop(client_id)
         
         if success:
-            # Send new shop items
-            await self.handle_options_request(client_id, {})
+            # Get refreshed shop items
+            shop_items = self.shop_manager.get_current_shop_items(client_id)
             
-        # Send refresh result
-        await self.send_to_client(client_id, {
-            "type": ServerMessageType.REFRESH_RESULT.value,
-            "success": success,
-            "message": message,
-            "remaining_gold": self.shop_manager.get_client_gold(client_id)
-        })
+            # Strip down to essential data
+            minimal_items = []
+            for item in shop_items:
+                minimal_items.append({
+                    "id": item["id"],
+                    "cost": item["cost"],
+                    "stock": item.get("stock_remaining", item.get("stock", 0)),
+                    "can_afford": item.get("can_afford", False),
+                    "already_purchased": item.get("already_purchased", False)
+                })
+            
+            # Send refresh result with new items
+            await self.send_to_client(client_id, {
+                "type": ServerMessageType.REFRESH_RESULT.value,
+                "success": success,
+                "data": minimal_items,
+                "remaining_gold": self.shop_manager.get_client_gold(client_id),
+                "message": message
+            })
+        else:
+            # Send refresh failure
+            await self.send_to_client(client_id, {
+                "type": ServerMessageType.REFRESH_RESULT.value,
+                "success": success,
+                "remaining_gold": self.shop_manager.get_client_gold(client_id),
+                "message": message
+            })
         
     async def handle_options_request(self, client_id: str, data: Dict[str, Any]):
         """Handle request for available options"""
         shop_items = self.shop_manager.get_current_shop_items(client_id)
         
+        # Strip down to essential data only
+        minimal_items = []
+        for item in shop_items:
+            minimal_items.append({
+                "id": item["id"],
+                "cost": item["cost"],
+                "stock": item.get("stock_remaining", item.get("stock", 0)),
+                "can_afford": item.get("can_afford", False),
+                "already_purchased": item.get("already_purchased", False)
+            })
+        
         await self.send_to_client(client_id, {
             "type": ServerMessageType.OPTIONS.value,
-            "data": shop_items,
+            "data": minimal_items,
             "client_gold": self.shop_manager.get_client_gold(client_id),
             "refresh_cost": ShopManager.REFRESH_COST
         })
@@ -389,7 +417,6 @@ class GameCoordinator:
             opponent_session.ready_for_next_phase = False
             
             # IMPORTANT: Clear previous batch data for both players
-            # This ensures a new batch will be created
             for s in [session, opponent_session]:
                 s.current_batch_id = None
                 s.batch_fights_completed = 0
@@ -402,12 +429,10 @@ class GameCoordinator:
             
             logger.info(f"Cleared batch data for both players, ready for new fight phase")
             
-            # Check if game should end
             if self._should_game_end(session):
                 await self.transition_client_phase(client_id, GamePhase.GAME_OVER)
                 await self.transition_client_phase(opponent_id, GamePhase.GAME_OVER)
             else:
-                # Continue to next fight
                 await self.transition_client_phase(client_id, GamePhase.FIGHTING)
                 await self.transition_client_phase(opponent_id, GamePhase.FIGHTING)
             
@@ -421,43 +446,34 @@ class GameCoordinator:
         success, msg, player_config = self.shop_manager.process_fighter_selection(client_id, option_id)
         
         if success:
-            # Create the player with selected config
             session.player = Player(
-                player_id=0,  # Undefined until the matchmaking can pair two players and set their ids
+                player_id=0,
                 fighter_name=player_config['fighter_name'],
                 starting_gold=player_config['starting_gold'],
                 starting_level=player_config['starting_level'],
                 learning_parameters=player_config['learning_parameters'],
-                initial_feature_mask=player_config.get('initial_feature_mask'),  # Fixed typo
+                initial_feature_mask=player_config.get('initial_feature_mask'), 
                 items=player_config.get('starting_items'),
                 num_actions=6,
                 num_features=20
             )
             
-            # Send success response for fighter selection
             await self.send_to_client(client_id, {
-                "type": ServerMessageType.PURCHASE_RESULT.value,  # Use same type for consistency
+                "type": ServerMessageType.PURCHASE_RESULT.value, 
                 "success": True,
-                "option_id": option_id,
+                "fighter_id": option_id,
                 "remaining_gold": self.shop_manager.get_client_gold(client_id),
                 "reason": "Fighter selected successfully"
             })
             
-            # Now send the first item shop
-            shop_items = self.shop_manager.get_current_shop_items(client_id)
-            await self.send_to_client(client_id, {
-                "type": ServerMessageType.OPTIONS.value,
-                "phase": "initial_items",
-                "data": shop_items,
-                "client_gold": self.shop_manager.get_client_gold(client_id),
-                "message": "Choose your starting items"
-            })
+            await self._enter_shop_phase(session)
+            
         else:
             # Send error
             await self.send_to_client(client_id, {
                 "type": ServerMessageType.PURCHASE_RESULT.value,
                 "success": False,
-                "option_id": option_id,
+                "fighter_id": option_id,
                 "remaining_gold": self.shop_manager.get_client_gold(client_id),
                 "reason": msg
             })
@@ -586,16 +602,21 @@ class GameCoordinator:
         # Generate fighter options
         fighter_options = self.shop_manager.generate_fighter_options(session.client_id)
         
+        # Strip down to minimal fighter data
+        minimal_fighters = []
+        for fighter in fighter_options:
+            minimal_fighters.append({
+                "option_id": fighter["option_id"],
+                "fighter_name": fighter["fighter_name"]
+            })
+        
         # Send fighter selection message
         await self.send_to_client(session.client_id, {
             "type": ServerMessageType.INITIAL_SHOP_READY.value,
             "phase": "fighter_selection",
-            "fighter_options": fighter_options,
+            "fighter_options": minimal_fighters,
             "message": "Choose your fighter and learning style"
         })
-        
-        # Client will respond with fighter selection
-        # Then we'll send the first item shop
     
     async def _enter_fighting(self, session: ClientSession):
         """
@@ -902,16 +923,27 @@ class GameCoordinator:
         # Get current inventory from player
         current_inventory = self._get_player_inventory(session)
         
-        # Send new shop with inventory data
+        # Get shop items with minimal data
         shop_items = self.shop_manager.get_current_shop_items(session.client_id)
+        minimal_items = []
+        for item in shop_items:
+            minimal_items.append({
+                "id": item["id"],
+                "cost": item["cost"],
+                "stock": item.get("stock_remaining", item.get("stock", 0)),
+                "can_afford": item.get("can_afford", False),
+                "already_purchased": item.get("already_purchased", False)
+            })
+        
+        # Send new shop with minimal data
         await self.send_to_client(session.client_id, {
             "type": ServerMessageType.SHOP_PHASE_START.value,
-            "data": shop_items,
+            "data": minimal_items,
             "client_gold": self.shop_manager.get_client_gold(session.client_id),
             "refresh_cost": ShopManager.REFRESH_COST,
-            "inventory": current_inventory, 
-            "fighter_id": session.player.fighter.name, 
-            "learning_parameters": session.player.learning_parameters,
+            "inventory": current_inventory,
+            "fighter_id": session.player.fighter.name,
+            "learning_parameters": session.player.learning_parameters.to_dict(),
             "message": "Shop refreshed after battle!"
         })
         # Client will respond with SHOP_PHASE_COMPLETE

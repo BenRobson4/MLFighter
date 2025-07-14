@@ -11,13 +11,14 @@ config_version=5
 [application]
 
 config/name="FightingGameClient"
-run/main_scene="uid://qp51pqptymgt"
 config/features=PackedStringArray("4.4", "Mobile")
 config/icon="res://icon.svg"
 
 [autoload]
 
+ItemDataLoader="*res://ItemDataLoader.gd"
 StatManager="*res://scenes/ui/StatManager.gd"
+FighterDataStore="*res://scenes/ui/FighterDataStore.gd"
 
 [display]
 

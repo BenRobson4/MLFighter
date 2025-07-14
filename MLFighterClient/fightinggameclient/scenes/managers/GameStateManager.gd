@@ -11,7 +11,7 @@ const SCENE_PATHS = {
 	"InitialShop": "res://scenes/game_phases/shop/InitialShop.tscn",  # Updated path
 	"Fighting": "res://scenes/templates/FightingTemplate.tscn",
 	"ReplayViewer": "res://scenes/templates/ReplayViewerTemplate.tscn",
-	"ShopPhase": "res://scenes/templates/ShopPhaseTemplate.tscn",
+	"ShopPhase": "res://scenes/game_phases/shop/ShopPhase.tscn",
 	"GameOver": "res://scenes/templates/GameOverTemplate.tscn"
 }
 
@@ -20,7 +20,8 @@ func _ready():
 	game_content_container = get_node("/root/Main/VBoxContainer/HSplitContainer/GameContent")
 
 func transition_to_scene(scene_name: String, data: Dictionary = {}):
-	print("Transitioning to scene: ", scene_name)
+	print("\n=== TRANSITIONING SCENE ===")
+	print("Scene name: ", scene_name)
 	
 	# Clean up current scene
 	if current_scene_instance:
@@ -34,11 +35,19 @@ func transition_to_scene(scene_name: String, data: Dictionary = {}):
 		if packed_scene:
 			current_scene_instance = packed_scene.instantiate()
 			
-			# Pass data to the new scene if it has an initialize method
-			if current_scene_instance.has_method("initialize"):
-				current_scene_instance.initialize(data)
-			
+			# First add to scene tree
 			game_content_container.add_child(current_scene_instance)
+			
+			# Wait for _ready to complete
+			await get_tree().process_frame
+			
+			# THEN pass data to the new scene
+			if current_scene_instance.has_method("initialize"):
+				print("Calling initialize with data")
+				current_scene_instance.initialize(data)
+			else:
+				print("Scene doesn't have initialize method!")
+			
 			emit_signal("scene_changed", scene_name)
 		else:
 			push_error("Failed to load scene: " + scene_path)

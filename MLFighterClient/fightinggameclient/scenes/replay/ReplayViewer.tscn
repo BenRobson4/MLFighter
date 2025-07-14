@@ -1,11 +1,11 @@
 [gd_scene load_steps=5 format=3 uid="uid://cgsgf0fciw5tn"]
 
-[ext_resource type="Script" uid="uid://dmekopwcdwol4" path="res://scripts/Main.gd" id="1_7nc2c"]
+[ext_resource type="Script" uid="uid://dmekopwcdwol4" path="res://scripts/ReplayViewer.gd" id="1_7nc2c"]
 [ext_resource type="PackedScene" uid="uid://dsgb272wk5fqp" path="res://scenes/replay/TopBar.tscn" id="2_wxunm"]
 [ext_resource type="PackedScene" uid="uid://sa2p8h1xwn06" path="res://scenes/replay/GameWorld.tscn" id="3_7srdb"]
 [ext_resource type="PackedScene" uid="uid://f8og2m06nje" path="res://scenes/replay/BottomBar.tscn" id="4_oucbh"]
 
-[node name="Main" type="Control"]
+[node name="ReplayViewer" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

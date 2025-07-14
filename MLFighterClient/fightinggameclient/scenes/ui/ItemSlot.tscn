@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://chlsp0fwtefib"]
+[gd_scene load_steps=6 format=3 uid="uid://chlsp0fwtefib"]
 
 [ext_resource type="Script" uid="uid://buipml14xmnar" path="res://scenes/ui/ItemSlot.gd" id="1_m2bxx"]
+[ext_resource type="Texture2D" uid="uid://b3vy8j3wusphx" path="res://sprites/items/ItemTooltipScroll.png" id="2_7oosq"]
 [ext_resource type="Texture2D" uid="uid://d03mvyqtlrjed" path="res://sprites/items/weapons/steel_sword.png" id="2_pp5lx"]
 [ext_resource type="Texture2D" uid="uid://dgds0jb25ccn0" path="res://sprites/items/borders/YellowBorder.png" id="3_8tltg"]
 [ext_resource type="Texture2D" uid="uid://dwgq7eqfysfxh" path="res://sprites/items/borders/BlueBorder.png" id="3_n2vbo"]
@@ -17,6 +18,59 @@ script = ExtResource("1_m2bxx")
 hover_border = ExtResource("3_n2vbo")
 selected_border = ExtResource("3_8tltg")
 
+[node name="TooltipContainer" type="Control" parent="."]
+show_behind_parent = true
+custom_minimum_size = Vector2(180, 540)
+anchors_preset = 0
+offset_right = 180.0
+offset_bottom = 540.0
+
+[node name="ClippingContainer" type="Control" parent="TooltipContainer"]
+clip_contents = true
+custom_minimum_size = Vector2(180, 540)
+layout_mode = 1
+anchors_preset = 0
+
+[node name="TooltipBackground" type="TextureRect" parent="TooltipContainer/ClippingContainer"]
+texture_filter = 1
+custom_minimum_size = Vector2(180, 540)
+layout_mode = 2
+offset_right = 180.0
+offset_bottom = 540.0
+texture = ExtResource("2_7oosq")
+stretch_mode = 5
+
+[node name="TooltipContent" type="VBoxContainer" parent="TooltipContainer"]
+custom_minimum_size = Vector2(120, 500)
+layout_mode = 0
+offset_left = 30.0
+offset_top = 20.0
+offset_right = 161.0
+offset_bottom = 520.0
+
+[node name="ItemName" type="RichTextLabel" parent="TooltipContainer/TooltipContent"]
+modulate = Color(0, 0, 0, 1)
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+horizontal_alignment = 1
+
+[node name="ItemDescription" type="RichTextLabel" parent="TooltipContainer/TooltipContent"]
+modulate = Color(0, 0, 0, 1)
+custom_minimum_size = Vector2(90, 51)
+layout_mode = 2
+size_flags_horizontal = 4
+bbcode_enabled = true
+scroll_active = false
+
+[node name="StatsContainer" type="VBoxContainer" parent="TooltipContainer/TooltipContent"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TooltipAnimationPlayer" type="AnimationPlayer" parent="TooltipContainer"]
+
 [node name="ItemBackground" type="TextureRect" parent="."]
 custom_minimum_size = Vector2(180, 180)
 layout_mode = 1
@@ -26,6 +80,7 @@ expand_mode = 3
 stretch_mode = 5
 
 [node name="ItemSprite" type="TextureRect" parent="."]
+visible = false
 custom_minimum_size = Vector2(180, 180)
 layout_mode = 1
 offset_right = 40.0
@@ -50,46 +105,3 @@ offset_right = 8.0
 offset_bottom = 8.0
 mouse_filter = 1
 flat = true
-
-[node name="TooltipContainer" type="Control" parent="."]
-custom_minimum_size = Vector2(250, 300)
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="TooltipBackground" type="TextureRect" parent="TooltipContainer"]
-custom_minimum_size = Vector2(250, 300)
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-stretch_mode = 5
-
-[node name="TooltipContent" type="VBoxContainer" parent="TooltipContainer"]
-custom_minimum_size = Vector2(230, 280)
-layout_mode = 0
-offset_left = 10.0
-offset_top = 10.0
-offset_right = 240.0
-offset_bottom = 290.0
-theme_override_constants/separation = 5
-
-[node name="ItemName" type="RichTextLabel" parent="TooltipContainer/TooltipContent"]
-custom_minimum_size = Vector2(230, 30)
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="ItemDescription" type="RichTextLabel" parent="TooltipContainer/TooltipContent"]
-custom_minimum_size = Vector2(230, 50)
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="StatsContainer" type="VBoxContainer" parent="TooltipContainer/TooltipContent"]
-custom_minimum_size = Vector2(230, 200)
-layout_mode = 2
-theme_override_constants/separation = 3
-
-[node name="TooltipAnimationPlayer" type="AnimationPlayer" parent="TooltipContainer"]

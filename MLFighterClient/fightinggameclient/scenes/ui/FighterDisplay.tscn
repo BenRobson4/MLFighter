@@ -33,74 +33,42 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="StatsList" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin"]
 layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="MainContainer/StatsPanel/StatsMargin/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 400
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 400
+theme_override_constants/margin_bottom = 50
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/VBoxContainer/MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="CombatStatsButton" type="Button" parent="MainContainer/StatsPanel/StatsMargin/VBoxContainer/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Combat stats"
+
+[node name="MovementStatsButton" type="Button" parent="MainContainer/StatsPanel/StatsMargin/VBoxContainer/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Movement# stats"
+
+[node name="LearningStatsButton" type="Button" parent="MainContainer/StatsPanel/StatsMargin/VBoxContainer/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Learning stats"
+
+[node name="StatsList" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 8.0
 theme_override_constants/separation = 15
-
-[node name="HealthStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="HealthLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/HealthStat"]
-layout_mode = 2
-text = "Health:"
-
-[node name="HealthBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/HealthStat"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-show_percentage = false
-
-[node name="AttackStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="AttackLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/AttackStat"]
-layout_mode = 2
-text = "Attack:"
-
-[node name="AttackBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/AttackStat"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-show_percentage = false
-
-[node name="DefenseStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="DefenseLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/DefenseStat"]
-layout_mode = 2
-text = "Defense\""
-
-[node name="DefenseBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/DefenseStat"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-show_percentage = false
-
-[node name="SpeedStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="SpeedLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpeedStat"]
-layout_mode = 2
-text = "Speed:"
-
-[node name="SpeedBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpeedStat"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-show_percentage = false
-
-[node name="SpecialStat" type="VBoxContainer" parent="MainContainer/StatsPanel/StatsMargin/StatsList"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="SpecialLabel" type="Label" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpecialStat"]
-layout_mode = 2
-text = "Special:"
-
-[node name="SpecialBar" type="ProgressBar" parent="MainContainer/StatsPanel/StatsMargin/StatsList/SpecialStat"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-show_percentage = false
 
 [node name="FighterPanel" type="PanelContainer" parent="MainContainer"]
 layout_mode = 2

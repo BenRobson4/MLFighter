@@ -112,48 +112,6 @@ func get_equipped_armour() -> Dictionary:
 			return get_armour_data(armour_id)
 	return {}
 
-func get_weapon_data(weapon_id: String) -> Dictionary:
-	"""Get weapon data by ID"""
-	print("Looking for weapon ID: ", weapon_id)
-	
-	# Parse the ID format: weapons_sword_steel_sword
-	var parts = weapon_id.split("_")
-	if parts.size() >= 3:
-		# Remove the first part (category) and rejoin the rest
-		var category = parts[1]  # "sword"
-		var item_key = "_".join(parts.slice(2))  # "steel_sword"
-		
-		print("Category: ", category, ", Item key: ", item_key)
-		
-		if weapons_data.has(category) and weapons_data[category].has(item_key):
-			var weapon_data = weapons_data[category][item_key].duplicate(true)
-			print("Found weapon data: ", weapon_data)
-			return weapon_data
-	
-	print("Weapon not found!")
-	return {}
-
-func get_armour_data(armour_id: String) -> Dictionary:
-	"""Get armour data by ID"""
-	print("Looking for armour ID: ", armour_id)
-	
-	# Parse the ID format: armour_light_leather_armour
-	var parts = armour_id.split("_")
-	if parts.size() >= 3:
-		# Remove the first part (category) and rejoin the rest
-		var category = parts[1]  # "light"
-		var item_key = "_".join(parts.slice(2))  # "leather_armour"
-		
-		print("Category: ", category, ", Item key: ", item_key)
-		
-		if armour_data.has(category) and armour_data[category].has(item_key):
-			var armour_data_found = armour_data[category][item_key].duplicate(true)
-			print("Found armour data: ", armour_data_found)
-			return armour_data_found
-	
-	print("Armour not found!")
-	return {}
-
 func apply_weapon_modifiers(stats: Dictionary, weapon: Dictionary):
 	"""Apply weapon modifiers to stats"""
 	if weapon.has("gravity_modifier"):
@@ -190,44 +148,77 @@ func apply_armour_modifiers(stats: Dictionary, armour: Dictionary):
 func get_current_stats() -> Dictionary:
 	"""Get the current calculated stats"""
 	return calculated_stats.duplicate(true)
-
-func preview_item_stats(item_id: String, item_type: String) -> Dictionary:
-	"""Preview stats if an item were equipped"""
-	var preview_inventory = current_inventory.duplicate(true)
 	
-	# Add the item as equipped
-	if item_type == "weapon":
-		# Unequip current weapon
-		if preview_inventory.has("weapons"):
-			for weapon in preview_inventory.weapons:
-				weapon.equipped = false
-		else:
+func get_item_data(item_id: String) -> Dictionary:
+	"""Universal item data getter"""
+	return ItemDataLoader.get_item_data(item_id)
+
+func preview_item_stats(item_id: String, item_type: String = "") -> Dictionary:
+	"""Preview stats if an item were equipped"""
+	var item_data = get_item_data(item_id)
+	if item_data.is_empty():
+		return calculated_stats.duplicate(true)
+	
+	var category = item_data.get("category", "")
+	var preview_inventory = current_inventory.duplicate(true)
+	var preview_learning = current_learning_parameters.duplicate(true)
+	
+	# Handle based on category
+	if category == "weapons":
+		# Unequip current weapon and equip new one
+		if not preview_inventory.has("weapons"):
 			preview_inventory.weapons = []
-		
-		# Add new weapon as equipped
+		for weapon in preview_inventory.weapons:
+			weapon.equipped = false
 		preview_inventory.weapons.append({
 			"item_id": item_id,
 			"equipped": true
 		})
-	
-	elif item_type == "armour":
-		# Unequip current armour
-		if preview_inventory.has("armour"):
-			for armour in preview_inventory.armour:
-				armour.equipped = false
-		else:
-			preview_inventory.armour = []
 		
-		# Add new armour as equipped
+	elif category == "armour":
+		# Unequip current armour and equip new one
+		if not preview_inventory.has("armour"):
+			preview_inventory.armour = []
+		for armour in preview_inventory.armour:
+			armour.equipped = false
 		preview_inventory.armour.append({
 			"item_id": item_id,
 			"equipped": true
 		})
+		
+	elif category == "learning_modifiers":
+		# Apply learning modifier
+		if item_data.has("delta"):
+			var subcategory = item_data.get("subcategory", "")
+			if "epsilon" in subcategory:
+				preview_learning["epsilon"] = preview_learning.get("epsilon", 0.5) + item_data.delta
+			elif "decay" in subcategory:
+				preview_learning["decay"] = preview_learning.get("decay", 0.005) + item_data.delta
+			elif "learning_rate" in subcategory:
+				preview_learning["learning_rate"] = preview_learning.get("learning_rate", 0.002) + item_data.delta
+				
+	elif category == "reward_modifiers":
+		# These don't affect displayed stats
+		return calculated_stats.duplicate(true)
 	
-	# Calculate stats with preview inventory
+	# Calculate preview stats
 	var old_inventory = current_inventory
+	var old_learning = current_learning_parameters
+	
 	current_inventory = preview_inventory
+	current_learning_parameters = preview_learning
 	var preview_stats = calculate_final_stats()
-	current_inventory = old_inventory  # Restore original
+	
+	current_inventory = old_inventory
+	current_learning_parameters = old_learning
 	
 	return preview_stats
+
+# Simplify the weapon/armour getters:
+func get_weapon_data(weapon_id: String) -> Dictionary:
+	"""Get weapon data by ID"""
+	return get_item_data(weapon_id)
+
+func get_armour_data(armour_id: String) -> Dictionary:
+	"""Get armour data by ID"""
+	return get_item_data(armour_id)

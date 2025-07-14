@@ -1,5 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://bcfrx6bt71uy3"]
+[gd_scene load_steps=5 format=3 uid="uid://bcfrx6bt71uy3"]
 
+[ext_resource type="Script" uid="uid://byag3wcufy8y8" path="res://scenes/ui/PlayerInventory.gd" id="1_e5vsa"]
 [ext_resource type="PackedScene" uid="uid://bsrwvl8qyv3v1" path="res://scenes/ui/FighterDisplay.tscn" id="1_i8iet"]
 [ext_resource type="PackedScene" uid="uid://chlsp0fwtefib" path="res://scenes/ui/ItemSlot.tscn" id="2_r8nnh"]
 [ext_resource type="Texture2D" uid="uid://bb18eb5qu1mdo" path="res://sprites/placeholder.jpg" id="3_r8nnh"]
@@ -11,6 +12,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_e5vsa")
 
 [node name="MainContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -54,7 +56,7 @@ text = "Inventory"
 
 [node name="InventoryGrid" type="HBoxContainer" parent="MainContainer/ColorRect/InventorySection"]
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 2
 
 [node name="ItemSlot" parent="MainContainer/ColorRect/InventorySection/InventoryGrid" instance=ExtResource("2_r8nnh")]
 layout_mode = 2

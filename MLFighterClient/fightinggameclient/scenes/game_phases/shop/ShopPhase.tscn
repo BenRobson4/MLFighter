@@ -1,0 +1,116 @@
+[gd_scene load_steps=4 format=3 uid="uid://bu8qy8lriiqu"]
+
+[ext_resource type="Script" uid="uid://bwcy8gfwmwyrs" path="res://scenes/game_phases/shop/Shop.gd" id="1_lchkp"]
+[ext_resource type="PackedScene" uid="uid://chlsp0fwtefib" path="res://scenes/ui/ItemSlot.tscn" id="2_kq2c7"]
+[ext_resource type="PackedScene" uid="uid://bcfrx6bt71uy3" path="res://scenes/ui/PlayerInventory.tscn" id="3_7fgja"]
+
+[node name="ShopPhase" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lchkp")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.333333, 1, 0.121569, 1)
+
+[node name="VBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HeaderPanel" type="Panel" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+
+[node name="GoldContainer" type="HBoxContainer" parent="VBoxContainer/HeaderPanel"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="GoldLabel" type="Label" parent="VBoxContainer/HeaderPanel/GoldContainer"]
+layout_mode = 2
+text = "Gold"
+
+[node name="PhaseLabel" type="Label" parent="VBoxContainer/HeaderPanel"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 16.0
+
+[node name="ItemSection" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.1
+
+[node name="ItemBackground" type="ColorRect" parent="VBoxContainer/ItemSection"]
+layout_mode = 2
+
+[node name="ItemContainer" type="VBoxContainer" parent="VBoxContainer/ItemSection"]
+layout_mode = 2
+
+[node name="ItemSlot1" parent="VBoxContainer/ItemSection/ItemContainer" instance=ExtResource("2_kq2c7")]
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+
+[node name="ItemSlot2" parent="VBoxContainer/ItemSection/ItemContainer" instance=ExtResource("2_kq2c7")]
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+
+[node name="ItemSlot3" parent="VBoxContainer/ItemSection/ItemContainer" instance=ExtResource("2_kq2c7")]
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+
+[node name="ItemSlot4" parent="VBoxContainer/ItemSection/ItemContainer" instance=ExtResource("2_kq2c7")]
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+
+[node name="ItemSlot5" parent="VBoxContainer/ItemSection/ItemContainer" instance=ExtResource("2_kq2c7")]
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer"]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.05
+
+[node name="InventorySection" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PlayerInventory" parent="VBoxContainer/InventorySection" instance=ExtResource("3_7fgja")]
+layout_mode = 2
+
+[node name="FooterPanel" type="Panel" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+
+[node name="RefreshButton" type="Button" parent="VBoxContainer/FooterPanel"]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="FinishShopButton" type="Button" parent="VBoxContainer/FooterPanel"]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0

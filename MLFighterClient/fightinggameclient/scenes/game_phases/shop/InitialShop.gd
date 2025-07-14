@@ -25,6 +25,9 @@ func _ready():
 	# Get network manager reference
 	network_manager = get_node("/root/Main/NetworkManager")
 	
+	# Connect to FighterDataStore signals
+	FighterDataStore.data_updated.connect(_on_fighter_data_updated)
+	
 	# Defer UI setup to ensure all nodes are ready
 	call_deferred("_setup_ui")
 	
@@ -339,8 +342,6 @@ func _update_fighter_display():
 	
 	# Base stats section
 	var base_stats = base_data.get("base_stats", {})
-	print("----------------------------------------------------------------------------------------------------------")
-	print("base stats:", base_stats)
 	if base_stats.size() > 0:
 		fighter_stats.clear()
 		
@@ -368,6 +369,9 @@ func _update_fighter_display():
 		
 		# Continue for other stats...
 		fighter_stats.pop() # pop base color
+		
+		# Store base stats in FighterDataStore for preview
+		_store_fighter_preview_data(fighter_type, base_stats, learning_params)
 	else:
 		fighter_stats.clear()
 		fighter_stats.push_color(Color(1.0, 0.5, 0.5))
@@ -380,6 +384,35 @@ func _update_fighter_display():
 	# Update select button
 	if select_button:
 		select_button.text = "Select " + fighter_type.capitalize()
+
+func _store_fighter_preview_data(fighter_type: String, base_stats: Dictionary, learning_params: Dictionary):
+	"""Store fighter data in FighterDataStore for preview purposes"""
+	var preview_id = "preview_" + fighter_type
+	
+	# Create fighter data structure
+	var fighter_data = {
+		"fighter_id": preview_id,
+		"base_stats": base_stats,
+		"inventory": {
+			"weapons": [],
+			"armour": [],
+			"features": [],
+			"modifiers": []
+		},
+		"learning_parameters": learning_params,
+		"calculated_stats": {},
+		"metadata": {
+			"last_updated": Time.get_ticks_msec(),
+			"is_preview": true,
+			"original_type": fighter_type
+		}
+	}
+	
+	# Store in FighterDataStore
+	FighterDataStore.set_fighter_data(preview_id, fighter_data)
+	
+	# Set as active for preview
+	FighterDataStore.set_active_fighter(preview_id)
 
 func _on_fighter_button_pressed(index: int):
 	"""Handle fighter button press"""
@@ -437,6 +470,41 @@ func _on_select_button_pressed():
 		push_error("Selected fighter has no option_id!")
 		return
 	
+	var fighter_type = selected_fighter_data.get("fighter_name", "unknown")
+	
+	# Store selected fighter in FighterDataStore as the actual fighter
+	var base_data = fighters_json_data.get(fighter_type, {})
+	var base_stats = base_data.get("base_stats", {})
+	var learning_params = selected_fighter_data.get("learning_parameters", {})
+	
+	# Create proper fighter data
+	var fighter_data = {
+		"fighter_id": fighter_type,
+		"base_stats": base_stats,
+		"inventory": {
+			"weapons": [],
+			"armour": [],
+			"features": [],
+			"modifiers": []
+		},
+		"learning_parameters": learning_params,
+		"calculated_stats": {},
+		"metadata": {
+			"last_updated": Time.get_ticks_msec(),
+			"wins": 0,
+			"losses": 0,
+			"gold": 1000,  # Starting gold
+			"option_id": option_id
+		}
+	}
+	
+	# Store in FighterDataStore
+	FighterDataStore.set_fighter_data(fighter_type, fighter_data)
+	FighterDataStore.set_active_fighter(fighter_type)
+	
+	# Clear preview data
+	FighterDataStore.clear_fighter_data("preview_" + fighter_type)
+	
 	# Send purchase message
 	print("Selecting fighter with option_id: ", option_id)
 	network_manager.send_message({
@@ -459,6 +527,13 @@ func _on_select_button_pressed():
 		for button in fighter_buttons.get_children():
 			button.disabled = true
 
+func _on_fighter_data_updated(fighter_id: String):
+	"""Handle fighter data updates from FighterDataStore"""
+	# Only update if it's the currently selected fighter
+	if fighter_id == FighterDataStore.active_fighter_id:
+		# Could refresh stats display here if needed
+		pass
+
 func _animate_entrance():
 	"""Animate the UI entrance"""
 	# Fade in effect
@@ -478,3 +553,4 @@ func _animate_entrance():
 			button_tween.set_parallel(true)
 			button_tween.tween_property(button, "position", original_pos, 0.3).set_delay(i * 0.1)
 			button_tween.tween_property(button, "modulate:a", 1.0, 0.3).set_delay(i * 0.1)
+			
