@@ -13,7 +13,7 @@ class ServerMessageType(Enum):
     GAME_STATE_CHANGE = "game_state_change"
     MATCHMAKING_STARTED = "matchmaking_started"
     MATCH_FOUND = "match_found"
-    INITIAL_SHOP_READY = "initial_shop_ready"
+    FIGHTER_SELECTION_READY = "fighter_selection_ready"
     WAITING_FOR_OPPONENT = "waiting_for_opponent"
     OPPONENT_READY = "opponent_ready"
     FIGHT_STARTING = "fight_starting"
@@ -47,7 +47,7 @@ class ClientMessageType(Enum):
     DISCONNECT = "disconnect"
     
     # Game flow messages
-    INITIAL_SHOP_COMPLETE = "initial_shop_complete"
+    FIGHTER_SELECTED = "fighter_selected"
     REPLAY_VIEWED = "replay_viewed"
     SHOP_PHASE_COMPLETE = "shop_phase_complete"
     
@@ -67,7 +67,7 @@ class GamePhase(Enum):
     """Game phases that clients can be in"""
     CONNECTING = "connecting"
     MATCHMAKING = "matchmaking"
-    INITIAL_SHOP = "initial_shop"
+    FIGHTER_SELECTION = "fighter_selection"
     FIGHTING = "fighting"
     VIEWING_REPLAY = "viewing_replay"
     SHOP_PHASE = "shop_phase"

@@ -16,9 +16,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-ItemDataLoader="*res://ItemDataLoader.gd"
-StatManager="*res://scenes/ui/StatManager.gd"
-FighterDataStore="*res://scenes/ui/FighterDataStore.gd"
+StaticDataManager="*res://scripts/main/static_data_manager.gd"
+GameDataStore="*res://scripts/main/game_data_store.gd"
 
 [display]
 

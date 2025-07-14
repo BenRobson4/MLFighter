@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3 uid="uid://clgg2pnvofl73"]
+
+[ext_resource type="Script" uid="uid://dbsw531d1swhu" path="res://scripts/main/game_controller.gd" id="1_elqb8"]
+[ext_resource type="Script" uid="uid://cbcx3jtsvswoq" path="res://scripts/main/network_manager.gd" id="2_rvslj"]
+
+[node name="Main" type="Node"]
+
+[node name="GameController" type="Node" parent="."]
+script = ExtResource("1_elqb8")
+
+[node name="NetworkManager" type="Node" parent="GameController"]
+script = ExtResource("2_rvslj")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ConnectionStatus" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="NotificationSystem" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PhaseContainer" type="Node" parent="."]

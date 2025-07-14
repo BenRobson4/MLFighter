@@ -145,26 +145,20 @@ class GameCoordinator:
         msg_type = message.get("type")
         
         # Route messages based on type
-        if msg_type == "purchase_option":
-            await self.handle_purchase_message(client_id, message)
+        if msg_type == ClientMessageType.PURCHASE_OPTION.value:
+            await self._handle_purchase_request(session, message)
             
-        elif msg_type == "request_options":
-            await self.handle_options_request(client_id, message)
+        elif msg_type == ClientMessageType.REQUEST_OPTIONS.value:
+            await self._handle_options_request(session, message)
             
-        elif msg_type == "refresh_shop":
-            await self.handle_refresh_request(client_id, message)
+        elif msg_type == ClientMessageType.REFRESH_SHOP.value:
+            await self._handle_refresh_request(session, message)
             
-        elif msg_type == "get_purchases":
-            await self.handle_purchases_request(client_id, message)
-            
-        elif msg_type == "get_status":
-            await self.handle_status_request(client_id, message)
-            
-        elif msg_type == ClientMessageType.INITIAL_SHOP_COMPLETE.value:
-            if session.current_phase == GamePhase.INITIAL_SHOP:
-                await self._handle_initial_shop_complete(session)
+        elif msg_type == ClientMessageType.FIGHTER_SELECTED.value:
+            if session.current_phase == GamePhase.FIGHTER_SELECTION:
+                await self._handle_fighter_selected(session, message)
             else:
-                await self.send_error(client_id, f"Current phase: {session.current_phase}, expected phase: {GamePhase.INITIAL_SHOP}", "INVALID_PHASE")
+                await self.send_error(client_id, f"Current phase: {session.current_phase}, expected phase: {GamePhase.FIGHTER_SELECTION}", "INVALID_PHASE")
 
         elif msg_type == ClientMessageType.REPLAY_VIEWED.value:
             if session.current_phase == GamePhase.VIEWING_REPLAY:
@@ -224,24 +218,22 @@ class GameCoordinator:
     
     # ==================== SHOP MESSAGE HANDLERS ====================
     
-    async def handle_purchase_message(self, client_id: str, data: Dict[str, Any]):
+    async def _handle_purchase_request(self, session: ClientSession, message: Dict[str, Any]):
         """Handle purchase request"""
+        client_id = session.client_id
+        if not client_id:
+            logger.error(f"Client ID not found in session during purchase request")
+            return
         session = self.sessions.get(client_id)
         if not session:
             return
             
-        item_id = data.get("option_id")
+        item_id = message.get("option_id")
         
         if not item_id:
             await self.send_error(client_id, "No item ID provided", "MISSING_ITEM_ID")
             return
-        
-        # Check if this is fighter selection (initial shop phase with no player yet)
-        if session.current_phase == GamePhase.INITIAL_SHOP and not session.player:
-            await self.handle_fighter_selection(client_id, data)
-            return
             
-        # Otherwise, process regular item purchase
         success, reason, purchase = self.shop_manager.process_purchase(client_id, item_id)
         
         # Send result
@@ -254,8 +246,13 @@ class GameCoordinator:
             "reason": reason
         })
             
-    async def handle_refresh_request(self, client_id: str, data: Dict[str, Any]):
+    async def _handle_refresh_request(self, session: ClientSession):
         """Handle shop refresh request"""
+        client_id = session.client_id
+        if not client_id:
+            logger.error(f"Client ID not found in session during refresh request")
+            return
+        
         success, message = self.shop_manager.refresh_shop(client_id)
         
         if success:
@@ -290,8 +287,13 @@ class GameCoordinator:
                 "message": message
             })
         
-    async def handle_options_request(self, client_id: str, data: Dict[str, Any]):
+    async def _handle_options_request(self, session: ClientSession):
         """Handle request for available options"""
+        client_id = session.client_id
+        if not client_id:
+            logger.error(f"Client ID not found in session during options request")
+            return
+        
         shop_items = self.shop_manager.get_current_shop_items(client_id)
         
         # Strip down to essential data only
@@ -311,75 +313,6 @@ class GameCoordinator:
             "client_gold": self.shop_manager.get_client_gold(client_id),
             "refresh_cost": ShopManager.REFRESH_COST
         })
-        
-    async def handle_purchases_request(self, client_id: str, data: Dict[str, Any]):
-        """Handle request for purchase history"""
-        summary = self.shop_manager.get_purchase_summary(client_id)
-        
-        await self.send_to_client(client_id, {
-            "type": ServerMessageType.PURCHASES_LIST.value,
-            "purchases": summary["purchase_history"],
-            "total_spent": summary["total_spent"],
-            "items_owned": summary["items_owned"]
-        })
-        
-    async def handle_status_request(self, client_id: str, data: Dict[str, Any]):
-        """Handle request for client status"""
-        summary = self.shop_manager.get_purchase_summary(client_id)
-        
-        await self.send_to_client(client_id, {
-            "type": ServerMessageType.STATUS.value,
-            "gold": summary["remaining_gold"],
-            "items_owned": summary["items_owned"],
-            "total_purchases": summary["total_purchases"]
-        })
-
-    async def _handle_initial_shop_complete(self, session: ClientSession):
-        """Handle when a player completes their initial shop"""
-        client_id = session.client_id
-        
-        # Mark this player as ready
-        session.ready_for_next_phase = True
-        session.initial_shop_complete = True
-        
-        # Get opponent
-        opponent_id = self.get_opponent_id(client_id)
-        if not opponent_id:
-            logger.error(f"No opponent found for {client_id} during initial shop complete")
-            return
-        
-        opponent_session = self.sessions.get(opponent_id)
-        if not opponent_session:
-            logger.error(f"No session found for opponent {opponent_id}")
-            return
-        
-        # Notify this player they're ready
-        await self.send_to_client(client_id, {
-            "type": ServerMessageType.WAITING_FOR_OPPONENT.value,
-            "message": "You're ready! Waiting for opponent to finish shopping..."
-        })
-        
-        # Notify opponent that this player is ready
-        await self.send_to_client(opponent_id, {
-            "type": ServerMessageType.OPPONENT_READY.value,
-            "message": f"Your opponent is ready!"
-        })
-        
-        # Check if both players are ready
-        if session.ready_for_next_phase and opponent_session.ready_for_next_phase:
-            # Reset ready flags for next phase
-            session.ready_for_next_phase = False
-            opponent_session.ready_for_next_phase = False
-            
-            # Both ready - transition both to fighting
-            logger.info(f"Both players ready - starting fight phase for match {self.client_to_match.get(client_id)}")
-            
-            # Small delay to ensure clients receive the ready messages
-            await asyncio.sleep(0.5)
-            
-            # Transition both players
-            await self.transition_client_phase(client_id, GamePhase.FIGHTING)
-            await self.transition_client_phase(opponent_id, GamePhase.FIGHTING)
         
     async def _handle_shop_phase_complete(self, session: ClientSession):
         """Handle when a player completes their shop phase"""
@@ -436,10 +369,10 @@ class GameCoordinator:
                 await self.transition_client_phase(client_id, GamePhase.FIGHTING)
                 await self.transition_client_phase(opponent_id, GamePhase.FIGHTING)
             
-    async def handle_fighter_selection(self, client_id: str, message: dict):
+    async def _handle_fighter_selected(self, session: ClientSession, message: Dict[str, Any]):
         """Handle fighter selection from client"""
-        session = self.sessions.get(client_id)
-        if not session:
+        client_id = session.client_id
+        if not client_id:
             return
         
         option_id = message.get("option_id")
@@ -466,7 +399,7 @@ class GameCoordinator:
                 "reason": "Fighter selected successfully"
             })
             
-            await self._enter_shop_phase(session)
+            await self.transition_client_phase(client_id, GamePhase.SHOP_PHASE)
             
         else:
             # Send error
@@ -499,8 +432,8 @@ class GameCoordinator:
         # Execute phase entry logic
         if new_phase == GamePhase.MATCHMAKING:
             await self._enter_matchmaking(session)
-        if new_phase == GamePhase.INITIAL_SHOP:
-            await self._enter_initial_shop(session)
+        if new_phase == GamePhase.FIGHTER_SELECTION:
+            await self._enter_fighter_selection(session)
         elif new_phase == GamePhase.FIGHTING:
             await self._enter_fighting(session)
         elif new_phase == GamePhase.VIEWING_REPLAY:
@@ -562,8 +495,8 @@ class GameCoordinator:
         await self._notify_match_found(player1_id, player2_id, match_id)
         
         # Transition both to initial shop
-        await self.transition_client_phase(player1_id, GamePhase.INITIAL_SHOP)
-        await self.transition_client_phase(player2_id, GamePhase.INITIAL_SHOP)
+        await self.transition_client_phase(player1_id, GamePhase.FIGHTER_SELECTION)
+        await self.transition_client_phase(player2_id, GamePhase.FIGHTER_SELECTION)
         
     async def _notify_match_found(self, player1_id: str, player2_id: str, match_id: str):
         """
@@ -595,7 +528,7 @@ class GameCoordinator:
             "message": f"Match found! Opponent: {p1_name}"
         })
     
-    async def _enter_initial_shop(self, session: ClientSession):
+    async def _enter_fighter_selection(self, session: ClientSession):
         """
         Start initial shop phase - fighter selection first, then items
         """
@@ -612,7 +545,7 @@ class GameCoordinator:
         
         # Send fighter selection message
         await self.send_to_client(session.client_id, {
-            "type": ServerMessageType.INITIAL_SHOP_READY.value,
+            "type": ServerMessageType.FIGHTER_SELECTION_READY.value,
             "phase": "fighter_selection",
             "fighter_options": minimal_fighters,
             "message": "Choose your fighter and learning style"
